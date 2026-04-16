@@ -33,6 +33,7 @@ MAX_MOVES = 5
 MAX_PLAYERS = 4
 
 STARTING_CASH = 500
+STARTING_SHARE_PRICE = 100
 OUTPOST_BONUS = 100
 STAR_BONUS = 500
 FOUNDERS_BONUS_SHARES = 5
@@ -145,13 +146,10 @@ class Player():
             if self.game.player_move(self, legal_moves, move):
                 self.game.last_move = move
                 break
-        # self.collect_dividends()
+        self.game.pay_dividends(self)
         if len(self.game.active_companies) > 0:
             self.buy_stocks()
 
-    def collect_dividends(self):
-        '''DIVIDEND_MULTIPLIER (5% in original) of value of stock of each company held'''
-        self.cash_on_hand += DIVIDEND_MULTIPLIER * self.stock_value
 
     def buy_stocks(self):
         '''
@@ -260,7 +258,7 @@ class Company():
         self.founded_on = game.turn_number
         self.name = self._get_open_company_name(self.game)
         self.symbol = COMPANIES[self.name]
-        self.share_price = 100
+        self.share_price = STARTING_SHARE_PRICE
         self.share_price += self.calculate_price_delta(nsew, is_new_company=True)
         self.check_for_split()
         #self.shares = FOUNDERS_BONUS_SHARES --- error in previous logic.
@@ -451,7 +449,6 @@ class Game():
     def player_move(self, player, legal_moves, move):
             if move in legal_moves:
                 self.play_move(player, move)
-                player.collect_dividends()
                 self.display.display_map(player.portfolio_for_map, last_move = self.last_move)
                 return True
             elif len(move) > 0 and move[0] in COMMANDS:
@@ -498,12 +495,21 @@ class Game():
         assert surviving_company.share_price % 100 == 0, \
             "Share price should always be a multiple of $100"
 
-
-
     def _resolve_merger(self, player, nsew):
         return self.merger(nsew)
 
+    def pay_dividends(self, player):
+        total = 0
 
+        for company in self.active_companies.values():
+            shares = player.portfolio.get(company.symbol, 0)
+            if shares > 0:
+                dividend = int(
+                    DIVIDEND_MULTIPLIER * shares * company.share_price
+                )
+                total += dividend
+
+        player.cash_on_hand += total
 
     def play_move(self, player, coordinate):
         '''
