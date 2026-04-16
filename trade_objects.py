@@ -304,27 +304,6 @@ class Company():
             if v == OUTPOST:
                 self.game.map.map[k] = self.symbol
 
-    def merger(self, nsew):
-        merging = [self.active_companies[c] for c in nsew['companies']]
-
-        while len(merging) > 1:
-            merging.sort()
-            loser = merging.pop(0)
-            winner = merging.pop(0)
-
-            # Tie-breaking: age-based dominance
-            if winner == loser and winner.founded_on > loser.founded_on:
-                winner, loser = loser, winner
-
-            # ---- updated merger flow ----
-            winner.merge_players(loser)
-            self._apply_merger_pricing(winner, loser)
-            self._update_map_after_merger(winner, loser)
-            self._retire_company(loser)
-
-            merging.append(winner)
-
-        return merging[0]
 
     def merge_players(self, losing_company):
 
@@ -498,6 +477,22 @@ class Game():
     def _resolve_merger(self, player, nsew):
         return self.merger(nsew)
 
+    def _update_map_after_merger(self, surviving_company, losing_company):
+        """
+        Replace losing company symbols on the map with the surviving symbol.
+        """
+        self.map.map = {
+            coord: surviving_company.symbol if tile == losing_company.symbol else tile
+            for coord, tile in self.map.map.items()
+        }
+
+    def _retire_company(self, company):
+        del self.active_companies[company.symbol]
+
+        for p in self.players:
+            if company.symbol in p.portfolio:
+                del p.portfolio[company.symbol]
+
     def pay_dividends(self, player):
         total = 0
 
@@ -547,23 +542,30 @@ class Game():
 
 
     def merger(self, nsew):
-        '''
-        Start by sorting the dictionary by outpost size
-        Then compare the lowest two companies
-        Add the winner back and do it all again if the len is > 1
-        0 index of tuple is company name; 1 index is outpost count
-        '''
-
         merging_companies = [self.active_companies[c] for c in nsew['companies']]
+
         while len(merging_companies) > 1:
             merging_companies.sort()
-            smallest, next_smallest = merging_companies.pop(0), merging_companies.pop(0)
-            if smallest == next_smallest:
-                if smallest.founded_on < next_smallest.founded_on:
-                    smallest, next_smallest = next_smallest, smallest
-            next_smallest.merge(smallest)
-            merging_companies.append(next_smallest)
-        return next_smallest
+            loser = merging_companies.pop(0)
+            winner = merging_companies.pop(0)
+
+            # Tie‑break rule (age‑based dominance)
+            if winner == loser and winner.founded_on > loser.founded_on:
+                winner, loser = loser, winner
+
+            # NEW explicit merger pipeline
+            winner.merge_players(loser)
+                        
+            self.display.display_merger(winner, loser)
+            self.display.any_to_continue()
+
+            self._apply_merger_pricing(winner, loser)
+            self._update_map_after_merger(winner, loser)
+            self._retire_company(loser)
+
+            merging_companies.append(winner)
+
+        return merging_companies[0]
 
 
     def quit(self, confirm = True):
@@ -705,14 +707,7 @@ class Map():
             return_vals = ["".join(f'{r}{col_or_row_value}') for r in results if r is not None]
         return return_vals
 
-    def _update_map_after_merger(self, surviving_company, losing_company):
-        """
-        Replace losing company symbols on the map with the surviving symbol.
-        """
-        self.map.map = {
-            coord: surviving_company.symbol if tile == losing_company.symbol else tile
-            for coord, tile in self.map.map.items()
-        }
+
 
 
     def _generate_map(self):
