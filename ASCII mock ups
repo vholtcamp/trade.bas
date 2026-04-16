@@ -1,0 +1,106 @@
+            *** {PLAYER}'s PORTFOLIO *** [13 - 41]
+-------------------------------------------------------
+Altair Starways (A)   |      10 |     500 |       5,000
+_______________________________________________________
+Betelgeuse Ltd. (B)   |       0 |     200 |           0
+_______________________________________________________
+Capella Freight (C)   |     500 |    2990 |   1,495,000
+_______________________________________________________
+Denebola Shippers (D) |       0 |       0 |           0
+_______________________________________________________
+Eridani Expedit. (E)  |       0 |       0 |           0
+=======================================================
+         Cash on hand |                          10,000
+_______________________________________________________
+            NET WORTH |                       1,505,000
+
+-------------------------------------------------------++++++++++++++++++++++++
+
+
+Turn number: 4 out of 24
+---------------------------------------   ***     THEO'S     ***
+A  B  C  D  E  F  G  H  I  L  K  L     |  ***   PORTFOLIO    ***
+1  +  .  .  .  .  .  *  .  .  *  .  *  |     A:   0 @    $800.00
+2  .  A  .  .  .  *  .  .  .  .  .  .  |     B:   5 @    $200.00
+3  .  A  .  .  .  .  .  .  .  .  .  .  |  Stocks:      $1,000.00
+4  .  A  .  .  .  .  .  .  .  .  .  .  |    Cash:        $550.00
+5  .  *  .  .  .  .  .  .  .  .  .  .  |  ______________________
+6  B  .  .  .  .  .  .  .  .  .  .  .  |  Total:       $1,550.00
+
+
+
+
+
+   A  B  C  D  E  F  G  H  I  L  K  L   |  ****   Holdings   ****
+1  .  .  .  .  .  .  .  .  .  .  .  .   |     A:  20 @     $200 [A: is right out of 5]
+2  .  .  .  .  .  .  .  .  .  .  .  .   |     B:  10 @     $500 [# and @ is right out of 6]
+3  .  .  .  .  .  .  *  .  .  *  .  *   |     C:   0 @   $1,000 [$ is right out of 9]
+4  .  .  .  .  .  *  .  .  .  .  .  .   |     D: 100 @   $2,990 [Stocks: is right out of 9]
+5  .  .  .  .  .  .  .  .  .  .  .  .   |     E:   0 @   $1,000 [Cash: is right out of 9]
+6  .  .  .  .  .  .  .  .  .  .  .  .   |  Stocks:      $10,000
+7  .  *  .  .  .  .  .  .  .  .  .  .   |    Cash:     $115,000
+8  .  .  .  .  .  .  .  .  .  .  .  .   |  ____________________
+9  .  .  .  .  .  .  .  .  .  *  .  *   |  Total:    $1,111,111 [Total: is right out of 9, $ out of 11]
+
+{Player}, choose a move from {legal_moves}:
+> [?]
+
+Line 1: Col List, then SPACER [   |   ], then HOLDINGS string
+Line 2 - 6(max): 1A - 1L, SPACER, {Right align CO_SYMBOL}: {R align # of shares} @ {R align $SHARE_PRICE}
+HOLDINGS changes to Centered "Stocks:" {R align $PORTFOLIO_WORTH}
+Next is Centered "Cash:" {R align $CASH ON HAND}
+Line of underscores
+Finally - "Total:" {R align $PLAYER NET WORTH}
+
+# So, print small portfolio to left and offer
+# full portfolio as command option
+# IDEA Make red companies the player owns no stock in?
+# IDEA Make yellow (?) companies close to splitting 2:1?
+
+ANNOUNCEMENT SPLASH
+
+===============================================
+*                 ATTENTION!                  *
+*       This is a special announcement        *
+*                                             *
+*               The stock of                  *
+*             {ALTAIR STARWAYS}               *
+*              has split 2:1!                 *
+*                                             *
+*   Please note the following transactions    *
+* ------------------------------------------- *
+* Player    Old Holdings     New Holdings     *
+* {Name}      {100}             {200}         *
+* {Name}      {100}             {200}         *
+===============================================
+
+
+==================================================
+*                  ATTENTION!                    *
+*        This is a special announcement          *
+*                                                *
+*             {LOSING_MERGER_CO}                 *
+*            has just merged with                *
+*            {WINNING_MERGER_CO}                 *
+*                                                *
+*    Please note the following transactions      *
+* ---------------------------------------------- *
+*  Player    Old stock     New Stock     Bonus   *
+*  {Name}      {100}         {200}       $200    *
+*  {Name}      {100}         {200}       $100    *
+==================================================
+
+==================================================
+*                 ATTENTION!                     *
+*       This is a special announcement           *
+*                                                *
+*             The game is over!                  *
+*                                                *
+*       {Winning Player} has won the game!       *
+*                                                *
+*       Here are the final standings             *
+* ---------------------------------------------- *
+*  Player    Cash      Stocks       Net Worth    *
+*  {Name}    {100}    3,000,000     3,500,000    *
+*  {Name}    {100}        {200}          $100    *
+==================================================
