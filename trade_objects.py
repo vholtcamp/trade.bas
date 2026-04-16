@@ -260,7 +260,9 @@ class Company():
         self.founded_on = game.turn_number
         self.name = self._get_open_company_name(self.game)
         self.symbol = COMPANIES[self.name]
-        self.share_price = int(0)
+        self.share_price = 100
+        self.share_price += self.calculate_price_delta(nsew, is_new_company=True)
+        self.check_for_split()
         #self.shares = FOUNDERS_BONUS_SHARES --- error in previous logic.
         player.portfolio[self.symbol] = FOUNDERS_BONUS_SHARES
         game.active_companies[self.symbol] = self
@@ -269,6 +271,7 @@ class Company():
         self.game.display.display_new_company(self)
         self.game.display.any_to_continue()
         self.game.display.display_map(player.portfolio_for_map)
+        assert self.share_price % 100 == 0, "Share price should always be a multiple of $100"
 
     @property
     def outposts(self):
@@ -281,51 +284,72 @@ class Company():
             for p in self.game.players
         )
 
+    def calculate_price_delta(self, nsew, *, is_new_company=False):
+        delta = 0
+
+        # Center square
+        if is_new_company:
+            delta += OUTPOST_BONUS
+
+        # Adjacent absorbed features
+        delta += nsew['outposts'] * OUTPOST_BONUS
+        delta += nsew['stars'] * STAR_BONUS
+
+        return delta
+
 
     def add_outpost(self, nsew):
         '''update map and share price based on stars/outposts'''
         self.game.map.map[nsew['center']] = self.symbol
-        self.share_price += int((OUTPOST_BONUS + ((nsew['stars'] * STAR_BONUS) + (nsew['outposts'] * OUTPOST_BONUS))))
-        self.check_for_split()
         # TODO - Might be a smoother, more pythonic way, to do this loop...
         for k, v in nsew['coordinates'].items():
             if v == OUTPOST:
                 self.game.map.map[k] = self.symbol
 
+    def merger(self, nsew):
+        merging = [self.active_companies[c] for c in nsew['companies']]
 
-    def merge(self, losing_company):
-        '''
-        Controls merging one company with another by calling subroutines:
+        while len(merging) > 1:
+            merging.sort()
+            loser = merging.pop(0)
+            winner = merging.pop(0)
 
-        * Calculate new holdings for each player (2:1 old to new stock)
-        * Calculate bonus paid to each player (% of old company owned * share price * 10)
-        * Calculate new stock price (should just be old company stock price + self.price)
-        * Check for stock split
-        * Update map with winning symbol
-        '''
+            # Tie-breaking: age-based dominance
+            if winner == loser and winner.founded_on > loser.founded_on:
+                winner, loser = loser, winner
+
+            # ---- updated merger flow ----
+            winner.merge_players(loser)
+            self._apply_merger_pricing(winner, loser)
+            self._update_map_after_merger(winner, loser)
+            self._retire_company(loser)
+
+            merging.append(winner)
+
+        return merging[0]
+
+    def merge_players(self, losing_company):
+
+        """
+        Handle *only* player-facing effects of a merger:
+        - share conversion (2-for-1, rounded)
+        - cash bonuses based on ownership percentage
+        """
+
+        total_old_shares = losing_company.total_shares()
 
         for p in self.game.players:
-            total = losing_company.total_shares()
-            if total > 0:
-                bonus = (p.portfolio[losing_company.symbol] / total) \
-                        * losing_company.share_price * MERGER_BONUS
+            old = p.portfolio.get(losing_company.symbol, 0)
+
+            if total_old_shares > 0:
+                bonus = MERGER_BONUS * (old / total_old_shares) * losing_company.share_price
             else:
                 bonus = 0
-            p.portfolio[self.symbol] += (p.portfolio[losing_company.symbol] // 2) + p.portfolio[self.symbol]
+
+            p.portfolio[self.symbol] += int((old / 2) + 0.5)
             p.cash_on_hand += bonus
             p.old_data_for_display = bonus
 
-
-
-        self.game.display.display_merger(self, losing_company)
-        self.game.display.any_to_continue()
-
-        self.share_price += losing_company.share_price
-        self.check_for_split()
-
-        self.game.map.map = {k:(self.symbol if v == losing_company.symbol else v)
-                            for (k,v) in self.game.map.map.items()}
-        self.retire_company(losing_company)
 
 
     def shares(self):
@@ -348,15 +372,14 @@ class Company():
         self.game.display.any_to_continue()
 
 
-    def retire_company(self, company):
-        '''
-        Remove from active companies list and player portfolios
-        then delete the object itself.
-        '''
-        del self.game.active_companies[company.symbol]
-        for p in self.game.players:
-            del p.portfolio[company.symbol]
-        del company
+
+    def _retire_company(self, company):
+        del self.active_companies[company.symbol]
+
+        for p in self.players:
+            if company.symbol in p.portfolio:
+                del p.portfolio[company.symbol]
+
 
     @property
     def str_share_price(self):
@@ -436,6 +459,52 @@ class Game():
             return False
 
 
+    def is_isolated_space(self, nsew):
+        return not set(nsew['coordinates'].values()).intersection(OCCUPIED_MAP_SYMBOLS)
+
+    def touches_exactly_one_company(self, nsew):
+        return len(nsew['companies']) == 1
+
+    def touches_multiple_companies(self, nsew):
+        return len(nsew['companies']) > 1
+
+    def can_form_new_company(self, nsew):
+        return nsew['stars'] > 0 or nsew['outposts'] > 0
+
+    def _place_outpost(self, coordinate):
+        self.map.map[coordinate] = OUTPOST
+
+    def _expand_company(self, company, nsew):
+        # Mutate map only
+        company.add_outpost(nsew)
+
+        # Apply expansion pricing
+        company.share_price += company.calculate_price_delta(
+            nsew, is_new_company=False
+        )
+
+        company.check_for_split()
+
+        assert company.share_price % 100 == 0, \
+            "Share price should always be a multiple of $100"
+
+    def _apply_merger_pricing(self, surviving_company, losing_company):
+        """
+        Apply company-level pricing effects of a merger.
+        """
+        surviving_company.share_price += losing_company.share_price
+        surviving_company.check_for_split()
+
+        assert surviving_company.share_price % 100 == 0, \
+            "Share price should always be a multiple of $100"
+
+
+
+    def _resolve_merger(self, player, nsew):
+        return self.merger(nsew)
+
+
+
     def play_move(self, player, coordinate):
         '''
         Legal move is already confirmed, so we should be able to write it
@@ -446,20 +515,29 @@ class Game():
         5. Check for mergers and process those, then write the new symbol to the map
         '''
 
+
         nsew = self.map.nsew(coordinate)
 
-        if not set(nsew['coordinates'].values()).intersection(OCCUPIED_MAP_SYMBOLS):
-            self.map.map[coordinate] = OUTPOST
-            return
-        elif len(nsew['companies']) == 1:
-            self.active_companies[nsew['companies'].pop()].add_outpost(nsew)
+        if self.is_isolated_space(nsew):
+            self._place_outpost(coordinate)
             return
 
-        if (nsew['stars'] > 0 or nsew['outposts'] > 0):
-            new_co = Company(self, player, nsew)
-        if len(nsew['companies']) > 1:
-            new_co = self.merger(nsew)
-            new_co.add_outpost(nsew)
+        if self.touches_multiple_companies(nsew):
+            surviving_company = self._resolve_merger(player, nsew)
+            surviving_company.add_outpost(nsew)
+            return
+        
+        if self.can_form_new_company(nsew):
+            Company(self, player, nsew)
+            return
+        
+        if self.touches_exactly_one_company(nsew):
+            symbol = next(iter(nsew['companies']))
+            company = self.active_companies[symbol]     
+            self._expand_company(company, nsew)
+            return
+
+        assert self.map.map[coordinate] != EMPTY_SPACE
 
 
     def merger(self, nsew):
@@ -620,6 +698,15 @@ class Map():
         else:
             return_vals = ["".join(f'{r}{col_or_row_value}') for r in results if r is not None]
         return return_vals
+
+    def _update_map_after_merger(self, surviving_company, losing_company):
+        """
+        Replace losing company symbols on the map with the surviving symbol.
+        """
+        self.map.map = {
+            coord: surviving_company.symbol if tile == losing_company.symbol else tile
+            for coord, tile in self.map.map.items()
+        }
 
 
     def _generate_map(self):
