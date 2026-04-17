@@ -259,9 +259,9 @@ class Company():
         self.name = self._get_open_company_name(self.game)
         self.symbol = COMPANIES[self.name]
         self.share_price = STARTING_SHARE_PRICE
+        old_price = self.share_price
         self.share_price += self.calculate_price_delta(nsew, is_new_company=True)
-        self.check_for_split()
-        #self.shares = FOUNDERS_BONUS_SHARES --- error in previous logic.
+        self.check_for_split(old_price)
         player.portfolio[self.symbol] = FOUNDERS_BONUS_SHARES
         game.active_companies[self.symbol] = self
         game.active_companies.move_to_end(self.symbol)
@@ -336,9 +336,19 @@ class Company():
         return total
 
 
-    def check_for_split(self):
-        if self.share_price > TWO_FOR_ONE_PRICE:
+    def check_for_split(self, previous_price):
+        crossed = (
+            previous_price < TWO_FOR_ONE_PRICE
+            and self.share_price >= TWO_FOR_ONE_PRICE
+        )
+
+        if crossed:
             self.split_stock()
+
+            # Safety invariant: cannot still be over threshold
+            assert self.share_price < TWO_FOR_ONE_PRICE, \
+                "Split did not reduce price below threshold"
+
 
     def split_stock(self):
         self.share_price /= 2
@@ -453,13 +463,12 @@ class Game():
     def _expand_company(self, company, nsew):
         # Mutate map only
         company.add_outpost(nsew)
-
-        # Apply expansion pricing
+        old_price = company.share_price
         company.share_price += company.calculate_price_delta(
             nsew, is_new_company=False
         )
 
-        company.check_for_split()
+        company.check_for_split(old_price)
 
         assert company.share_price % 100 == 0, \
             "Share price should always be a multiple of $100"
@@ -468,8 +477,9 @@ class Game():
         """
         Apply company-level pricing effects of a merger.
         """
+        old_price = surviving_company.share_price
         surviving_company.share_price += losing_company.share_price
-        surviving_company.check_for_split()
+        surviving_company.check_for_split(old_price)
 
         assert surviving_company.share_price % 100 == 0, \
             "Share price should always be a multiple of $100"
