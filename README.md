@@ -3,15 +3,18 @@
 
 A modern Python re‑implementation of the classic 1970s/80s BASIC trading game
 originally distributed as `TRADE.BAS` on systems such as the Kaypro II.
+The dot in the name mirrors the original filename, a BASIC source file distributed with the Kaypro II.
 
 This project preserves the core mechanics and feel of the original game while
 providing a clean, testable, and extensible Python implementation.
 
-## What This Project Is Not
+## Game Name
 
-- Not a clone of more complex games also named Star Traders. (The latter-day "Star Traders" were games with ship systems, fuel, or commodity trading.)
+*Star Lanes* was the title used in the original 1977 *Interface Age* publication; `TRADE.BAS` is the filename of that listing, and most commonly used when loading the game from a floppy disk. The name *Star Traders* appears in some later distributions and is used loosely here to describe the genre of game, though *Star Traders* itself was a different game that was more RPG-like, with specific ships and trading missions originally based on arbitrage pricing of fictional space-faring commodities.
 
 ## Quick Start
+
+Requires Python 3.8 or later.
 
 1. Create and activate a virtual environment.
 
@@ -91,10 +94,7 @@ For detailed economic contracts and invariants, see docs/economic_model.md.
 - trade_objects.py: core domain model (Game, Company, Player, Map, Display).
 - tests/: rule-focused pytest suite. See tests/README.md.
 - docs/: behavioral contracts and invariants. See docs/README.md.
-- diagnostics/: economic logging recipes and event log reference. See diagnostics/README.md.
-- BASIC_code_files/: original GW-BASIC source, preserved as reference. See BASIC_code_files/README.md.
-- archives/: legacy scripts and experiments, not part of the active codebase. See archives/README.md.
-- smoke_checklist.md: manual runtime smoke checklist.
+- BASIC_code_files/: original BASIC source, preserved as reference. See BASIC_code_files/README.md.
 
 ## Known Behavioral Notes
 
