@@ -101,8 +101,10 @@ For detailed economic contracts and invariants, see docs/economic_model.md.
 - Compared to the original BASIC game, merger tie-break behavior has been adapted to company longevity (founded earlier wins ties) in the current implementation.
 - Company creation and merger precedence are event-driven and tested.
 
-## Development Notes
+## License
 
-- Keep rule changes synchronized across code, tests, and economic model docs.
-- Prefer invariant-based tests over UI assertions.
-- Avoid introducing UI dependencies in rule-engine tests.
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+The original BASIC source code and accompanying publication are included for historical reference. Their original copyright status is preserved.
+
+
