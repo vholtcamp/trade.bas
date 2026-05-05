@@ -2,13 +2,10 @@
 # TRADE.BAS
 
 A modern Python re‑implementation of the classic 1970s/80s BASIC trading game
-originally distributed as `TRADE.BAS` on systems such as the Kaypro II
+originally distributed as `TRADE.BAS` on systems such as the Kaypro II.
 
-## What This Project Is
-
-- A rule-faithful Python implementation of the original game loop and economy.
-- A test-backed refactor target for core game rules.
-- A terminal game using blessings for display.
+This project preserves the core mechanics and feel of the original game while
+providing a clean, testable, and extensible Python implementation.
 
 ## What This Project Is Not
 
