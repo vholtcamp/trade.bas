@@ -3,6 +3,7 @@
 
 A modern Python re‑implementation of the classic 1970s/80s BASIC trading game
 originally distributed as `TRADE.BAS` on systems such as the Kaypro II.
+The dot in the name mirrors the original filename, a BASIC source file distributed with the Kaypro II.
 
 This project preserves the core mechanics and feel of the original game while
 providing a clean, testable, and extensible Python implementation.
@@ -12,6 +13,8 @@ providing a clean, testable, and extensible Python implementation.
 - Not a clone of more complex games also named Star Traders. (The latter-day "Star Traders" were games with ship systems, fuel, or commodity trading.)
 
 ## Quick Start
+
+Requires Python 3.8 or later.
 
 1. Create and activate a virtual environment.
 

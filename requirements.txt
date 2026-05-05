@@ -1,1 +1,3 @@
+# Requires Python 3.8+
 blessings
+pytest

@@ -26,5 +26,4 @@ These contracts are the canonical reference for the test suite. If economic rule
 ## What Does Not Belong Here
 
 - Implementation notes tied to specific classes or methods (use inline docstrings)
-- Temporary working notes (use scratch.md at project root)
 - Test documentation (see tests/README.md)

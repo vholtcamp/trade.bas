@@ -8,6 +8,7 @@ This directory contains the original GW-BASIC source code for TRADE.BAS, preserv
 |---|---|
 | TRADE.bas | Original GW-BASIC source for the Star Traders game as it ran on the Kaypro II |
 | Star Lanes code original publication in Interface magazine.pdf | Scanned publication of the original Star Lanes listing from Interface Age magazine |
+| REFERENCES.md | Link to the original publication on the Internet Archive |
 
 ## Purpose
 
