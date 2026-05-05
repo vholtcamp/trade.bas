@@ -91,10 +91,7 @@ For detailed economic contracts and invariants, see docs/economic_model.md.
 - trade_objects.py: core domain model (Game, Company, Player, Map, Display).
 - tests/: rule-focused pytest suite. See tests/README.md.
 - docs/: behavioral contracts and invariants. See docs/README.md.
-- diagnostics/: economic logging recipes and event log reference. See diagnostics/README.md.
-- BASIC_code_files/: original GW-BASIC source, preserved as reference. See BASIC_code_files/README.md.
-- archives/: legacy scripts and experiments, not part of the active codebase. See archives/README.md.
-- smoke_checklist.md: manual runtime smoke checklist.
+- BASIC_code_files/: original BASIC source, preserved as reference. See BASIC_code_files/README.md.
 
 ## Known Behavioral Notes
 

@@ -35,7 +35,7 @@ The test suite reflects behaviors observed in the original GW‑BASIC TRADE.BAS 
 From repository root:
 
 ```bash
-/Users/vh/repos/trade/.venv/bin/python -m pytest -q
+python -m pytest -q
 ```
 
 Pytest discovery is constrained by `pytest.ini`:
