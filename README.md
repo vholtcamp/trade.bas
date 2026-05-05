@@ -1,8 +1,8 @@
-# Star Traders (TRADE.BAS Python Port)
 
-This repository is a Python port of the original GW-BASIC Star Traders game.
+# TRADE.BAS
 
-The project currently focuses on preserving classic economic behavior while modernizing the implementation for testing and refactoring.
+A modern Python re‑implementation of the classic 1970s/80s BASIC trading game
+originally distributed as `TRADE.BAS` on systems such as the Kaypro II
 
 ## What This Project Is
 
