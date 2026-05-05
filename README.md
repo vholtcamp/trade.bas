@@ -1,6 +1,9 @@
 
 # TRADE.BAS
 
+![TRADE.BAS gameplay screenshot](docs/trade_screenshot.png)
+
+
 A modern Python re‑implementation of the classic 1970s/80s BASIC trading game
 originally distributed as `TRADE.BAS` on systems such as the Kaypro II.
 The dot in the name mirrors the original filename, a BASIC source file distributed with the Kaypro II.
