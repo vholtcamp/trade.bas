@@ -8,9 +8,9 @@ The dot in the name mirrors the original filename, a BASIC source file distribut
 This project preserves the core mechanics and feel of the original game while
 providing a clean, testable, and extensible Python implementation.
 
-## What This Project Is Not
+## Game Name
 
-- Not a clone of more complex games also named Star Traders. (The latter-day "Star Traders" were games with ship systems, fuel, or commodity trading.)
+*Star Lanes* was the title used in the original 1977 *Interface Age* publication; `TRADE.BAS` is the filename of that listing, and most commonly used when loading the game from a floppy disk. The name *Star Traders* appears in some later distributions and is used loosely here to describe the genre of game, though *Star Traders* itself was a different game that was more RPG-like, with specific ships and trading missions originally based on arbitrage pricing of fictional space-faring commodities.
 
 ## Quick Start
 
