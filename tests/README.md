@@ -132,3 +132,35 @@ price quantization, or state transitions before adjusting expected values.
 
 - Some assertions intentionally reflect current implementation behavior to prevent regression before refactoring.
 - If game rules are intentionally changed later, update tests and this README together to keep the suite as the authoritative behavior contract.
+
+## Economic Event Logging (Diagnostic Only)
+
+Economic event logging is built into the engine as opt-in diagnostics.
+
+Configuration lives in `trade_objects.py`:
+
+- `DEBUG_ECON = False`
+- `ECON_LOG_FILE = "econ_events.log"`
+
+When `DEBUG_ECON` is `False`:
+
+- no economic log output is produced
+- game behavior is unchanged
+- logging code paths are skipped
+
+When `DEBUG_ECON` is `True`:
+
+- one structured JSON line is emitted per economic event
+- output is written to `ECON_LOG_FILE`
+
+Logged event categories:
+
+- company creation
+- company expansion
+- merger player effects
+- merger company effects
+- stock split
+- dividend payout
+- stock purchase
+
+This logging is diagnostic infrastructure, not gameplay logic, and can be removed without changing economic rules.
