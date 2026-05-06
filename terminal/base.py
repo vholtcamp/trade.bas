@@ -6,6 +6,11 @@ Concrete implementations provide platform-specific behavior.
 """
 
 class TerminalBase:
+
+    @property
+    def supports_color(self) -> bool:
+        return False
+
     def clear(self) -> str:
         """
         Return a string that clears the terminal screen.
@@ -35,3 +40,16 @@ class TerminalBase:
         Read input from the user.
         """
         return input(prompt)
+    
+
+    def color(
+        self,
+        text: str,
+        fg: str | None = None,
+        bold: bool = False
+        ) -> str:
+        """
+        Return text rendered with optional foreground color and bold styling.
+        fg may be None or a color name (e.g. 'red', 'green').
+        """
+        raise NotImplementedError
