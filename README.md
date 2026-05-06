@@ -38,13 +38,13 @@ source .venv/bin/activate
 2. Install dependencies.
 
 ```bash
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 3. Run the game.
 
 ```bash
-python trade_main.py
+python3 trade_main.py
 ```
 
 ## Gameplay Summary
