@@ -3,7 +3,7 @@ Container for trade game
 '''
 import sys
 from trade_objects import Game
-from blessings import Terminal
+from terminal.blessings_term import BlessingsTerminal
 
 
 # *** Set modes here ***
@@ -14,7 +14,7 @@ interactive = True # Will allow user interaction, even if autopilot is true
 MAX_PLAYERS = 4
 TOTAL_TURNS = 49
 
-term = Terminal()
+term = BlessingsTerminal()
 
 
 # Shall we play a game?
