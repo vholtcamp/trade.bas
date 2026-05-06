@@ -1225,10 +1225,11 @@ class Display():
 
     def prompt_stock_purchase(self, company, player):
         '''Offer stock to purchase and prompt - return number of shares to buy'''
+        term = self.game.terminal
         print(f'')
        
         print(
-            f'Purchase how many shares of {BOLD}{company.name}{RESET} '
+            f'Purchase how many shares of {term.bold(company.name)} '
             f'at {company.str_share_price} per share?'
         )
         
