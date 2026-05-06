@@ -35,7 +35,7 @@ def game_factory():
     """Create isolated Game instances with explicit execution modes and no display side effects."""
 
     def _make_game(*, interactive=False, autopilot=True, number_of_players=2, max_turns=50):
-        terminal = SimpleNamespace(clear=lambda: "")
+        terminal = SimpleNamespace(clear=lambda: "", width=80, height=24, supports_color=False, color=lambda text, **kwargs: text,)
         g = Game(
             number_of_players=number_of_players,
             terminal=terminal,

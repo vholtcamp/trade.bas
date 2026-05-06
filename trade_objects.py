@@ -25,6 +25,11 @@ from dataclasses import dataclass
 
 import re
 no_cents = re.compile(r'.00$')
+ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
+
+def visible_len(text: str) -> int:
+    return len(ANSI_ESCAPE_RE.sub('', text))
+
 
 
 # Economic event logging (diagnostic only).
@@ -111,6 +116,14 @@ def tile_kind_from_symbol(symbol):
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
+COMPANY_COLORS = {
+    'A': 'red',
+    'B': 'green',
+    'C': 'yellow',
+    'D': 'blue',
+    'E': 'magenta',
+}
+
 
 STAR = '*'
 OUTPOST = '+'
@@ -141,12 +154,39 @@ SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL = '*'
 SPECIAL_ANNOUNCEMENT_TOP_SYMBOL = '='
 SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL = '='
 SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL = '-'
+SPECIAL_ANNOUNCEMENT_LEFT_GUTTER = 1
+SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER = 3   # try 2 first; 3 if you want it looser
+
 SPECIAL_ANNOUNCEMENT_WIDTH = 61
-SPECIAL_ANNOUNCEMENT_TEXT_WIDTH = SPECIAL_ANNOUNCEMENT_WIDTH - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
+SPECIAL_ANNOUNCEMENT_TEXT_WIDTH = (
+    SPECIAL_ANNOUNCEMENT_WIDTH
+    - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
+    - SPECIAL_ANNOUNCEMENT_LEFT_GUTTER
+    - SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER
+)
+
+SPECIAL_ANNOUNCEMENT_INNER_WIDTH = (
+    SPECIAL_ANNOUNCEMENT_TEXT_WIDTH
+    + SPECIAL_ANNOUNCEMENT_LEFT_GUTTER
+    + SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER
+)
+
+
+SPECIAL_ANNOUNCEMENT_FRAME_INNER_WIDTH = (
+    SPECIAL_ANNOUNCEMENT_WIDTH
+    - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
+)
+
+
 
 SPECIAL_ANNOUNCEMENT_HEADER = SPECIAL_ANNOUNCEMENT_TOP_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
 SPECIAL_ANNOUNCEMENT_FOOTER = SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
-SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE = (SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH - 2))
+
+SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE = (
+    SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL
+    * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH + 2)
+)
+
 
 SPECIAL_ANNOUNCEMENT_HEADER_LINE = 'SPECIAL ANNOUNCEMENT!!!'
 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE = 'Please note the following transactions:'
@@ -197,6 +237,28 @@ COMPANIES = {
 CREATE_COMPANY_SYMBOLS = set((STAR, OUTPOST))
 COMPANY_SYMBOLS = set((COMPANIES.values()))
 OCCUPIED_MAP_SYMBOLS = CREATE_COMPANY_SYMBOLS.union(COMPANY_SYMBOLS)
+
+
+# *** Classes for announcement components ***
+class AnnouncementLine:
+    """Base class for lines in announcements, to allow for different types of content and formatting in a structured way."""
+    pass
+
+class ContentLine(AnnouncementLine):
+    def __init__(self, text, alignment = 'c'):
+        self.text = text
+        self.alignment = alignment
+
+class RuleLine(AnnouncementLine):
+    """Horizontal rule inside announcements, to separate content from player info."""
+    pass
+
+class BlankLine(AnnouncementLine):
+    """Blank line inside announcements."""
+    pass
+
+
+
 
 
 class Player():
@@ -254,9 +316,11 @@ class Player():
         Loop through all active companies and let player buy stock. Update
         portfolio and cash_on_hand as needed. Blank entry converted to zero.
         '''
+        term = self.game.terminal
         for symbol in sorted(self.game.active_companies.keys()):
             c = self.game.active_companies[symbol]
             self.game.display.display_map(self.portfolio_for_map)
+            formatted_name = term.color(c.name, fg=COMPANY_COLORS[c.symbol]) if term.supports_color else c.name
 
             while True:
                 shares_raw = self.game.display.prompt_stock_purchase(c, self)
@@ -264,7 +328,7 @@ class Player():
 
                 # Blank input → skip purchasing for this company    
                 if not shares_raw:
-                    self.game.last_action = f"Skipped purchase of {c.name}"
+                    self.game.last_action = f"Skipped purchase of {formatted_name}"
                     break
 
                 # # Allow quit at any input prompt
@@ -291,7 +355,7 @@ class Player():
 
                 
                 # Valid purchase - apply it and break out of loop to move on to next company
-                self.game.last_action = f"Purchased {shares} shares of {c.name}"
+                self.game.last_action = f"Purchased {shares} shares of {formatted_name}"
 
                 if self.game.debug_econ:
                     symbols = [c.symbol]
@@ -1214,6 +1278,7 @@ class Display():
         self.game = game
         '''Lots more stuff here as display gets more complex'''
 
+
     def input_prompt(self, input_string = "> "):
         return input(input_string)
 
@@ -1229,7 +1294,7 @@ class Display():
         print(f'')
        
         print(
-            f'Purchase how many shares of {term.bold(company.name)} '
+            f'Purchase how many shares of {term.color(company.name, fg=COMPANY_COLORS[company.symbol])} '
             f'at {company.str_share_price} per share?'
         )
         
@@ -1242,11 +1307,19 @@ class Display():
     def display_announcement (self, lines, player_info = None, company = None, losing_company = None, alignment = 'c'):
         print(self.game.terminal.clear())
         self._print_announcement_header()
+        
         for line in lines:
-            if type(line) == list:
+            if isinstance(line, RuleLine):
+                self._print_rule()
+            elif isinstance(line, BlankLine):
+                self._print_blank()
+            elif isinstance(line, ContentLine):
+                self._print(line.text, alignment=line.alignment)
+            elif type(line) == list:
                 self._print(data=line[0], alignment=line[1])
             else:
                 self._print(line)
+
         if player_info:
             self._print_player_info(columns = player_info,
                                     company = company,
@@ -1256,38 +1329,76 @@ class Display():
         self._print_announcement_footer()
 
 
+    
+    def _print_rule(self):
+        print(f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL} ' f'{SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE}' f' {SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}')
+
+
+
+
+
+    def _print_blank(self):
+        self._print('')
+
+
     def display_new_company(self, company):
+        term = self.game.terminal
+        plain_name = company.name
+        centered_name = self._apply_display_alignment(plain_name, alignment = 'c')
+        if term.supports_color:
+            formatted_name = centered_name.replace(plain_name, term.color(plain_name, fg=COMPANY_COLORS[company.symbol]), 1)
+        else:
+            formatted_name = centered_name
         self.display_announcement([
                                 NEW_COMPANY_PHRASE,
-                                company.name.upper(),
-                                " ",
+                                formatted_name,
+                                BlankLine(),
                                 f'Opening Price: {company.str_share_price}'
                 ]
             )
 
 
     def display_two_for_one(self, company):
+        term = self.game.terminal
+        plain_company = company.name.upper()
+
+        centered_company = self._apply_display_alignment(plain_company, alignment = 'c')
+
+        if term.supports_color:
+            centered_company = centered_company.replace(plain_company, term.color(plain_company, fg=COMPANY_COLORS[company.symbol]), 1)
+
         self.display_announcement([
                                 TWO_FOR_ONE_PHRASES[0],
-                                company.name.upper(),
+                                centered_company,
                                 TWO_FOR_ONE_PHRASES[1],
-                                " ",
+                                BlankLine(),
                                 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE,
-                                SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE,
+                                RuleLine(),
                                 [TWO_FOR_ONE_CATEGORIES, STD_CAT_ALIGNMENT]
                 ], TWO_FOR_ONE_COLUMNS, company = company, alignment = STD_CAT_ALIGNMENT
             )
 
     def display_merger(self, company, losing_company):
+        term = self.game.terminal
+        plain_winner = company.name
+        plain_loser = losing_company.name
+
+        centered_winner = self._apply_display_alignment(plain_winner, alignment = 'c')
+        centered_loser = self._apply_display_alignment(plain_loser, alignment = 'c')
+
+        if term.supports_color:
+            centered_winner = centered_winner.replace(plain_winner, term.color(plain_winner, fg=COMPANY_COLORS[company.symbol]), 1)
+            centered_loser = centered_loser.replace(plain_loser, term.color(plain_loser, fg=COMPANY_COLORS[losing_company.symbol]), 1)
+
         self.display_announcement([
-                                losing_company.name.upper(),
-                                " ",
+                                centered_loser,
+                                BlankLine(),
                                 MERGER_PHRASE,
-                                " ",
-                                company.name.upper(),
-                                " ",
+                                BlankLine(),
+                                centered_winner,
+                                BlankLine(),
                                 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE,
-                                SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE,
+                                RuleLine(),
                                 [MERGER_CATEGORIES, STD_CAT_ALIGNMENT]
                 ], MERGER_COLUMNS, company = company, losing_company = losing_company,
                     alignment = STD_CAT_ALIGNMENT
@@ -1296,6 +1407,7 @@ class Display():
 
     def display_map(self, player_portfolio):
         '''Print map and mini portfolio for standard turn.'''
+        term = self.game.terminal
         map = self.game.map
         print(self.game.terminal.clear())
         turn_line = (
@@ -1307,10 +1419,17 @@ class Display():
         portfolio_header = f'*** {self.game.active_player.name}\'s Portfolio ***'
         header = MAP_HEADER + MINI_PORTFOLIO_SPACER + portfolio_header
         print(header)
+
         for row_num,row in enumerate(ROW_LIST):
             print (f'{row}', end ='')
             for char in COL_LIST:
-                print(f'{MAP_PRINT_SPACE}{map[char + row]}', end='')
+                symbol = map[char + row]
+                if symbol in COMPANY_COLORS and term.supports_color:
+                    rendered = term.color(symbol, fg=COMPANY_COLORS[symbol])
+                else:
+                    rendered = symbol
+                print(f'{MAP_PRINT_SPACE}{rendered}', end='')
+
             print(f'{player_portfolio[row_num]}')
         print(f' ')
         if self.game.last_action:
@@ -1321,9 +1440,9 @@ class Display():
         self.display_announcement([
                                 GAME_OVER_PHRASES[0],
                                 self._get_winner_string(),
-                                '',
+                                BlankLine(),
                                 GAME_OVER_PHRASES[1],
-                                SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE,
+                                RuleLine(),
                                 [GAME_OVER_CATEGORIES, STD_CAT_ALIGNMENT]
                 ], player_info = GAME_OVER_COLUMNS, alignment = STD_CAT_ALIGNMENT
             )
@@ -1367,28 +1486,58 @@ class Display():
             line = self._create_columns_line(data, alignment)
         else:
             line = self._apply_display_alignment(data, alignment)
-        blank_fill = ' ' * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH - len(line))
-        print(f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}{line}{blank_fill}{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}')
+        print(
+            f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}'
+            f'{" " * SPECIAL_ANNOUNCEMENT_LEFT_GUTTER}'
+            f'{line}'
+            f'{" " * SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER}'    
+            f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}'
+            )
 
 
     def _create_columns_line(self, columns, alignments):
-        '''Given list of strings to align, returns single line with appropriate spacing '''
-        result = ''
+        
+        """
+        Given list of strings to align, returns single line with appropriate spacing.
+        Ensures total visible width equals SPECIAL_ANNOUNCEMENT_TEXT_WIDTH, with spacing for borders.
+        """
+        
+        num_cols = len(columns)
+        usable_width = SPECIAL_ANNOUNCEMENT_TEXT_WIDTH
+        base_width = usable_width // num_cols
+        remainder = usable_width - (base_width * num_cols)
+
+
+        result = ""
+
         for index, text in enumerate(columns):
-            result += self._apply_display_alignment(text,
-                alignment = alignments[index] if len(alignments) > index else 'c',
-                col_width = SPECIAL_ANNOUNCEMENT_TEXT_WIDTH // len(columns)
+            # Last column gets the remainder
+            col_width = base_width + (remainder if index == num_cols - 1 else 0)
+
+            result += self._apply_display_alignment(
+                text,
+                alignment=alignments[index] if len(alignments) > index else 'c',
+                col_width=col_width
             )
         return result
 
 
+
     def _apply_display_alignment(self, text, alignment = '', col_width = SPECIAL_ANNOUNCEMENT_TEXT_WIDTH):
-        if alignment not in ('r', 'l'):
-            return text.center(col_width)
-        elif alignment == 'r':
-            return text.rjust(col_width)
+
+        vis_len = visible_len(text)
+        pad = max(0, col_width - vis_len)
+
+        
+        if alignment == 'r':
+            return ' ' * pad + text
+        elif alignment == 'l':
+            return text + ' ' * pad
         else:
-            return text.ljust(col_width)
+            left = pad // 2
+            right = pad - left
+            return ' ' * left + text + ' ' * right
+
         
 
 

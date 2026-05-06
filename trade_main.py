@@ -8,8 +8,8 @@ from terminal.blessings_term import BlessingsTerminal
 
 # *** Set modes here ***
 # Standard play is autopilot = False and interactive = True, which allows user input and interaction.
-autopilot = False   # Game selects moves and stock purchases when True; can ask for user input
-interactive = True # Will allow user interaction, even if autopilot is true
+autopilot = True   # Game selects moves and stock purchases when True; can ask for user input
+interactive = False # Will allow user interaction, even if autopilot is true
 
 MAX_PLAYERS = 4
 TOTAL_TURNS = 49
