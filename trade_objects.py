@@ -25,6 +25,11 @@ from dataclasses import dataclass
 
 import re
 no_cents = re.compile(r'.00$')
+ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
+
+def visible_len(text: str) -> int:
+    return len(ANSI_ESCAPE_RE.sub('', text))
+
 
 
 # Economic event logging (diagnostic only).
@@ -262,9 +267,11 @@ class Player():
         Loop through all active companies and let player buy stock. Update
         portfolio and cash_on_hand as needed. Blank entry converted to zero.
         '''
+        term = self.game.terminal
         for symbol in sorted(self.game.active_companies.keys()):
             c = self.game.active_companies[symbol]
             self.game.display.display_map(self.portfolio_for_map)
+            formatted_name = term.color(c.name, fg=COMPANY_COLORS[c.symbol]) if term.supports_color else c.name
 
             while True:
                 shares_raw = self.game.display.prompt_stock_purchase(c, self)
@@ -272,7 +279,7 @@ class Player():
 
                 # Blank input → skip purchasing for this company    
                 if not shares_raw:
-                    self.game.last_action = f"Skipped purchase of {c.name}"
+                    self.game.last_action = f"Skipped purchase of {formatted_name}"
                     break
 
                 # # Allow quit at any input prompt
@@ -299,7 +306,7 @@ class Player():
 
                 
                 # Valid purchase - apply it and break out of loop to move on to next company
-                self.game.last_action = f"Purchased {shares} shares of {c.name}"
+                self.game.last_action = f"Purchased {shares} shares of {formatted_name}"
 
                 if self.game.debug_econ:
                     symbols = [c.symbol]
@@ -1222,6 +1229,7 @@ class Display():
         self.game = game
         '''Lots more stuff here as display gets more complex'''
 
+
     def input_prompt(self, input_string = "> "):
         return input(input_string)
 
@@ -1265,9 +1273,16 @@ class Display():
 
 
     def display_new_company(self, company):
+        term = self.game.terminal
+        plain_name = company.name
+        centered_name = self._apply_display_alignment(plain_name, alignment = 'c')
+        if term.supports_color:
+            formatted_name = centered_name.replace(plain_name, term.color(plain_name, fg=COMPANY_COLORS[company.symbol]), 1)
+        else:
+            formatted_name = centered_name
         self.display_announcement([
                                 NEW_COMPANY_PHRASE,
-                                company.name.upper(),
+                                formatted_name,
                                 " ",
                                 f'Opening Price: {company.str_share_price}'
                 ]
@@ -1287,12 +1302,19 @@ class Display():
             )
 
     def display_merger(self, company, losing_company):
+        term = self.game.terminal
+        if term.supports_color:
+            formatted_winner = term.color(company.name, fg=COMPANY_COLORS[company.symbol])
+            formatted_loser = term.color(losing_company.name, fg=COMPANY_COLORS[losing_company.symbol])
+        else:
+            formatted_winner = company.name
+            formatted_loser = losing_company.name
         self.display_announcement([
-                                losing_company.name.upper(),
+                                formatted_loser,
                                 " ",
                                 MERGER_PHRASE,
                                 " ",
-                                company.name.upper(),
+                                formatted_winner,
                                 " ",
                                 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE,
                                 SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE,
@@ -1383,8 +1405,7 @@ class Display():
             line = self._create_columns_line(data, alignment)
         else:
             line = self._apply_display_alignment(data, alignment)
-        blank_fill = ' ' * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH - len(line))
-        print(f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}{line}{blank_fill}{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}')
+        print(f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}{line}{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}')
 
 
     def _create_columns_line(self, columns, alignments):
@@ -1399,12 +1420,20 @@ class Display():
 
 
     def _apply_display_alignment(self, text, alignment = '', col_width = SPECIAL_ANNOUNCEMENT_TEXT_WIDTH):
-        if alignment not in ('r', 'l'):
-            return text.center(col_width)
-        elif alignment == 'r':
-            return text.rjust(col_width)
+
+        vis_len = visible_len(text)
+        pad = max(0, col_width - vis_len)
+
+        
+        if alignment == 'r':
+            return ' ' * pad + text
+        elif alignment == 'l':
+            return text + ' ' * pad
         else:
-            return text.ljust(col_width)
+            left = pad // 2
+            right = pad - left
+            return ' ' * left + text + ' ' * right
+
         
 
 
