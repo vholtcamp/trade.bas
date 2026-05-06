@@ -14,6 +14,9 @@ class BlessingsTerminal(TerminalBase):
 
     def clear(self) -> str:
         return self.term.clear()
+    
+    def fullscreen(self):
+        return self.term.fullscreen()
 
     def bold(self, text: str) -> str:
         return self.term.bold(text)

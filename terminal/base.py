@@ -41,6 +41,14 @@ class TerminalBase:
         """
         return input(prompt)
     
+    def fullscreen(self):
+        """
+        Context manager for fullscreen terminal mode.
+        Default implementation is a no-op.
+        """
+        return nullcontext()
+
+    
 
     def color(
         self,
