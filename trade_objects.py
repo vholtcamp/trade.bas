@@ -111,6 +111,14 @@ def tile_kind_from_symbol(symbol):
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
+COMPANY_COLORS = {
+    'A': 'red',
+    'B': 'green',
+    'C': 'yellow',
+    'D': 'blue',
+    'E': 'magenta',
+}
+
 
 STAR = '*'
 OUTPOST = '+'
@@ -1229,7 +1237,7 @@ class Display():
         print(f'')
        
         print(
-            f'Purchase how many shares of {term.bold(company.name)} '
+            f'Purchase how many shares of {term.color(company.name, fg=COMPANY_COLORS[company.symbol])} '
             f'at {company.str_share_price} per share?'
         )
         
@@ -1296,6 +1304,7 @@ class Display():
 
     def display_map(self, player_portfolio):
         '''Print map and mini portfolio for standard turn.'''
+        term = self.game.terminal
         map = self.game.map
         print(self.game.terminal.clear())
         turn_line = (
@@ -1307,10 +1316,17 @@ class Display():
         portfolio_header = f'*** {self.game.active_player.name}\'s Portfolio ***'
         header = MAP_HEADER + MINI_PORTFOLIO_SPACER + portfolio_header
         print(header)
+
         for row_num,row in enumerate(ROW_LIST):
             print (f'{row}', end ='')
             for char in COL_LIST:
-                print(f'{MAP_PRINT_SPACE}{map[char + row]}', end='')
+                symbol = map[char + row]
+                if symbol in COMPANY_COLORS and term.supports_color:
+                    rendered = term.color(symbol, fg=COMPANY_COLORS[symbol])
+                else:
+                    rendered = symbol
+                print(f'{MAP_PRINT_SPACE}{rendered}', end='')
+
             print(f'{player_portfolio[row_num]}')
         print(f' ')
         if self.game.last_action:
