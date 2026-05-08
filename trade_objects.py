@@ -154,12 +154,39 @@ SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL = '*'
 SPECIAL_ANNOUNCEMENT_TOP_SYMBOL = '='
 SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL = '='
 SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL = '-'
+SPECIAL_ANNOUNCEMENT_LEFT_GUTTER = 1
+SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER = 3   # try 2 first; 3 if you want it looser
+
 SPECIAL_ANNOUNCEMENT_WIDTH = 61
-SPECIAL_ANNOUNCEMENT_TEXT_WIDTH = SPECIAL_ANNOUNCEMENT_WIDTH - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
+SPECIAL_ANNOUNCEMENT_TEXT_WIDTH = (
+    SPECIAL_ANNOUNCEMENT_WIDTH
+    - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
+    - SPECIAL_ANNOUNCEMENT_LEFT_GUTTER
+    - SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER
+)
+
+SPECIAL_ANNOUNCEMENT_INNER_WIDTH = (
+    SPECIAL_ANNOUNCEMENT_TEXT_WIDTH
+    + SPECIAL_ANNOUNCEMENT_LEFT_GUTTER
+    + SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER
+)
+
+
+SPECIAL_ANNOUNCEMENT_FRAME_INNER_WIDTH = (
+    SPECIAL_ANNOUNCEMENT_WIDTH
+    - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
+)
+
+
 
 SPECIAL_ANNOUNCEMENT_HEADER = SPECIAL_ANNOUNCEMENT_TOP_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
 SPECIAL_ANNOUNCEMENT_FOOTER = SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
-SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE = (SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH - 2))
+
+SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE = (
+    SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL
+    * SPECIAL_ANNOUNCEMENT_FRAME_INNER_WIDTH
+)
+
 
 SPECIAL_ANNOUNCEMENT_HEADER_LINE = 'SPECIAL ANNOUNCEMENT!!!'
 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE = 'Please note the following transactions:'
@@ -1290,9 +1317,17 @@ class Display():
 
 
     def display_two_for_one(self, company):
+        term = self.game.terminal
+        plain_company = company.name.upper()
+
+        centered_company = self._apply_display_alignment(plain_company, alignment = 'c')
+
+        if term.supports_color:
+            centered_company = centered_company.replace(plain_company, term.color(plain_company, fg=COMPANY_COLORS[company.symbol]), 1)
+
         self.display_announcement([
                                 TWO_FOR_ONE_PHRASES[0],
-                                company.name.upper(),
+                                centered_company,
                                 TWO_FOR_ONE_PHRASES[1],
                                 " ",
                                 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE,
@@ -1303,18 +1338,22 @@ class Display():
 
     def display_merger(self, company, losing_company):
         term = self.game.terminal
+        plain_winner = company.name
+        plain_loser = losing_company.name
+
+        centered_winner = self._apply_display_alignment(plain_winner, alignment = 'c')
+        centered_loser = self._apply_display_alignment(plain_loser, alignment = 'c')
+
         if term.supports_color:
-            formatted_winner = term.color(company.name, fg=COMPANY_COLORS[company.symbol])
-            formatted_loser = term.color(losing_company.name, fg=COMPANY_COLORS[losing_company.symbol])
-        else:
-            formatted_winner = company.name
-            formatted_loser = losing_company.name
+            centered_winner = centered_winner.replace(plain_winner, term.color(plain_winner, fg=COMPANY_COLORS[company.symbol]), 1)
+            centered_loser = centered_loser.replace(plain_loser, term.color(plain_loser, fg=COMPANY_COLORS[losing_company.symbol]), 1)
+
         self.display_announcement([
-                                formatted_loser,
+                                centered_loser,
                                 " ",
                                 MERGER_PHRASE,
                                 " ",
-                                formatted_winner,
+                                centered_winner,
                                 " ",
                                 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE,
                                 SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE,
@@ -1405,18 +1444,41 @@ class Display():
             line = self._create_columns_line(data, alignment)
         else:
             line = self._apply_display_alignment(data, alignment)
-        print(f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}{line}{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}')
+        print(
+            f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}'
+            f'{" " * SPECIAL_ANNOUNCEMENT_LEFT_GUTTER}'
+            f'{line}'
+            f'{" " * SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER}'    
+            f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}'
+            )
 
 
     def _create_columns_line(self, columns, alignments):
-        '''Given list of strings to align, returns single line with appropriate spacing '''
-        result = ''
+        
+        """
+        Given list of strings to align, returns single line with appropriate spacing.
+        Ensures total visible width equals SPECIAL_ANNOUNCEMENT_TEXT_WIDTH, with spacing for borders.
+        """
+        
+        num_cols = len(columns)
+        usable_width = SPECIAL_ANNOUNCEMENT_TEXT_WIDTH
+        base_width = usable_width // num_cols
+        remainder = usable_width - (base_width * num_cols)
+
+
+        result = ""
+
         for index, text in enumerate(columns):
-            result += self._apply_display_alignment(text,
-                alignment = alignments[index] if len(alignments) > index else 'c',
-                col_width = SPECIAL_ANNOUNCEMENT_TEXT_WIDTH // len(columns)
+            # Last column gets the remainder
+            col_width = base_width + (remainder if index == num_cols - 1 else 0)
+
+            result += self._apply_display_alignment(
+                text,
+                alignment=alignments[index] if len(alignments) > index else 'c',
+                col_width=col_width
             )
         return result
+
 
 
     def _apply_display_alignment(self, text, alignment = '', col_width = SPECIAL_ANNOUNCEMENT_TEXT_WIDTH):
