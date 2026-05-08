@@ -164,21 +164,6 @@ SPECIAL_ANNOUNCEMENT_TEXT_WIDTH = (
     - SPECIAL_ANNOUNCEMENT_LEFT_GUTTER
     - SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER
 )
-
-SPECIAL_ANNOUNCEMENT_INNER_WIDTH = (
-    SPECIAL_ANNOUNCEMENT_TEXT_WIDTH
-    + SPECIAL_ANNOUNCEMENT_LEFT_GUTTER
-    + SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER
-)
-
-
-SPECIAL_ANNOUNCEMENT_FRAME_INNER_WIDTH = (
-    SPECIAL_ANNOUNCEMENT_WIDTH
-    - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
-)
-
-
-
 SPECIAL_ANNOUNCEMENT_HEADER = SPECIAL_ANNOUNCEMENT_TOP_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
 SPECIAL_ANNOUNCEMENT_FOOTER = SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
 
@@ -186,7 +171,6 @@ SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE = (
     SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL
     * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH + 2)
 )
-
 
 SPECIAL_ANNOUNCEMENT_HEADER_LINE = 'SPECIAL ANNOUNCEMENT!!!'
 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE = 'Please note the following transactions:'
@@ -408,9 +392,18 @@ class Player():
          ___________________
          Total:   $1,111,111
         '''
+        
+        term = self.game.terminal
+
         s, c, t, p = 'Stocks:', 'Cash:', 'Total:', []
         for k in sorted(self.game.active_companies.keys()):
-            p.append(f'{MINI_PORTFOLIO_SPACER}{k:>4}: {self.portfolio[k]:>3} @ {locale.currency(self.game.active_companies[k].share_price, grouping=True):>10}')
+            if term.supports_color and k in COMPANY_COLORS:
+                symbol = term.color(k, fg=COMPANY_COLORS[k])
+            else:
+                symbol = k
+
+            p.append(f'{MINI_PORTFOLIO_SPACER} {symbol:>4}: {self.portfolio[k]:>3} @ {locale.currency(self.game.active_companies[k].share_price, grouping=True):>10}')
+        
         p.append(f'{MINI_PORTFOLIO_SPACER}{s:>6} {locale.currency(self.stock_value, grouping=True):>14}')
         p.append(f'{MINI_PORTFOLIO_SPACER}{c:>7} {locale.currency(self.cash_on_hand, grouping=True):>14}')
         p.append(f'{MINI_PORTFOLIO_SPACER}{MINI_PORTFOLIO_UNDERSCORE}')
