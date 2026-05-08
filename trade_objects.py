@@ -184,7 +184,7 @@ SPECIAL_ANNOUNCEMENT_FOOTER = SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL * SPECIAL_ANNOUN
 
 SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE = (
     SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL
-    * SPECIAL_ANNOUNCEMENT_FRAME_INNER_WIDTH
+    * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH + 2)
 )
 
 
@@ -237,6 +237,28 @@ COMPANIES = {
 CREATE_COMPANY_SYMBOLS = set((STAR, OUTPOST))
 COMPANY_SYMBOLS = set((COMPANIES.values()))
 OCCUPIED_MAP_SYMBOLS = CREATE_COMPANY_SYMBOLS.union(COMPANY_SYMBOLS)
+
+
+# *** Classes for announcement components ***
+class AnnouncementLine:
+    """Base class for lines in announcements, to allow for different types of content and formatting in a structured way."""
+    pass
+
+class ContentLine(AnnouncementLine):
+    def __init__(self, text, alignment = 'c'):
+        self.text = text
+        self.alignment = alignment
+
+class RuleLine(AnnouncementLine):
+    """Horizontal rule inside announcements, to separate content from player info."""
+    pass
+
+class BlankLine(AnnouncementLine):
+    """Blank line inside announcements."""
+    pass
+
+
+
 
 
 class Player():
@@ -1285,11 +1307,19 @@ class Display():
     def display_announcement (self, lines, player_info = None, company = None, losing_company = None, alignment = 'c'):
         print(self.game.terminal.clear())
         self._print_announcement_header()
+        
         for line in lines:
-            if type(line) == list:
+            if isinstance(line, RuleLine):
+                self._print_rule()
+            elif isinstance(line, BlankLine):
+                self._print_blank()
+            elif isinstance(line, ContentLine):
+                self._print(line.text, alignment=line.alignment)
+            elif type(line) == list:
                 self._print(data=line[0], alignment=line[1])
             else:
                 self._print(line)
+
         if player_info:
             self._print_player_info(columns = player_info,
                                     company = company,
@@ -1297,6 +1327,18 @@ class Display():
                                     alignment = alignment
                                 )
         self._print_announcement_footer()
+
+
+    
+    def _print_rule(self):
+        print(f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL} ' f'{SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE}' f' {SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}')
+
+
+
+
+
+    def _print_blank(self):
+        self._print('')
 
 
     def display_new_company(self, company):
@@ -1310,7 +1352,7 @@ class Display():
         self.display_announcement([
                                 NEW_COMPANY_PHRASE,
                                 formatted_name,
-                                " ",
+                                BlankLine(),
                                 f'Opening Price: {company.str_share_price}'
                 ]
             )
@@ -1329,9 +1371,9 @@ class Display():
                                 TWO_FOR_ONE_PHRASES[0],
                                 centered_company,
                                 TWO_FOR_ONE_PHRASES[1],
-                                " ",
+                                BlankLine(),
                                 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE,
-                                SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE,
+                                RuleLine(),
                                 [TWO_FOR_ONE_CATEGORIES, STD_CAT_ALIGNMENT]
                 ], TWO_FOR_ONE_COLUMNS, company = company, alignment = STD_CAT_ALIGNMENT
             )
@@ -1350,13 +1392,13 @@ class Display():
 
         self.display_announcement([
                                 centered_loser,
-                                " ",
+                                BlankLine(),
                                 MERGER_PHRASE,
-                                " ",
+                                BlankLine(),
                                 centered_winner,
-                                " ",
+                                BlankLine(),
                                 SPECIAL_ANNOUNCEMENT_PLEASE_NOTE,
-                                SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE,
+                                RuleLine(),
                                 [MERGER_CATEGORIES, STD_CAT_ALIGNMENT]
                 ], MERGER_COLUMNS, company = company, losing_company = losing_company,
                     alignment = STD_CAT_ALIGNMENT
@@ -1398,9 +1440,9 @@ class Display():
         self.display_announcement([
                                 GAME_OVER_PHRASES[0],
                                 self._get_winner_string(),
-                                '',
+                                BlankLine(),
                                 GAME_OVER_PHRASES[1],
-                                SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE,
+                                RuleLine(),
                                 [GAME_OVER_CATEGORIES, STD_CAT_ALIGNMENT]
                 ], player_info = GAME_OVER_COLUMNS, alignment = STD_CAT_ALIGNMENT
             )
