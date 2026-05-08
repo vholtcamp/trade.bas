@@ -1074,8 +1074,11 @@ class Game():
                 return False
 
         self.display.display_end_of_game()
-        print("Hit return/enter to quit.")
-        input()
+
+        if self.interactive:
+            print("Hit return/enter to quit.")
+            input()
+        
         sys.exit()
 
     def _get_legal_moves(self, game_map):
