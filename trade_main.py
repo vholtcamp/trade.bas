@@ -4,6 +4,7 @@ Container for trade game
 import sys
 from trade_objects import Game
 from terminal.blessings_term import BlessingsTerminal
+import platform
 
 
 # *** Set modes here ***
@@ -14,7 +15,14 @@ interactive = False # Will allow user interaction, even if autopilot is true
 MAX_PLAYERS = 4
 TOTAL_TURNS = 49
 
-term = BlessingsTerminal()
+
+
+if platform.system() == 'Windows':
+    from terminal.windows_terminal import WindowsTerminal
+    term = WindowsTerminal()
+else:
+    from terminal.blessings_term import BlessingsTerminal
+    term = BlessingsTerminal()
 
 
 # Shall we play a game?

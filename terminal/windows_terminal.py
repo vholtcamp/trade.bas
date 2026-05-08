@@ -1,0 +1,24 @@
+import os
+
+try:
+    from colorama import Fore, Style, init
+    init()
+    COLORAMA_AVAILABLE = True
+except ImportError:
+    COLORAMA_AVAILABLE = False
+
+
+class WindowsTerminal:
+    def __init__(self, use_color=True):
+        self.supports_color = COLORAMA_AVAILABLE and use_color
+
+    def clear(self):
+        os.system("cls")
+        return ""
+
+    def color(self, text, fg=None):
+        if not self.supports_color or not fg:
+            return text
+
+        color = getattr(Fore, fg.upper(), "")
+        return f"{color}{text}{Style.RESET_ALL}"
