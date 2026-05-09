@@ -3,7 +3,6 @@ Container for trade game
 '''
 import sys
 from trade_objects import Game
-from terminal.blessings_term import BlessingsTerminal
 import platform
 
 
