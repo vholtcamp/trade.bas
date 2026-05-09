@@ -1,5 +1,7 @@
 import os
 import subprocess
+from contextlib import nullcontext
+
 
 try:
     from colorama import Fore, Style, init
