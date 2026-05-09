@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 try:
     from colorama import Fore, Style, init
@@ -13,7 +14,7 @@ class WindowsTerminal:
         self.supports_color = COLORAMA_AVAILABLE and use_color
 
     def clear(self):
-        os.system("cls")
+        subprocess.run('cls', shell=True)
         return ""
 
     def color(self, text, fg=None):
@@ -22,3 +23,9 @@ class WindowsTerminal:
 
         color = getattr(Fore, fg.upper(), "")
         return f"{color}{text}{Style.RESET_ALL}"
+    
+
+    def fullscreen(self):
+        # Windows has no curses-style fullscreen; no-op context manager
+        return nullcontext()
+
