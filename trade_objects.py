@@ -25,18 +25,110 @@ from dataclasses import dataclass
 
 import re
 no_cents = re.compile(r'.00$')
-ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
+ANSI_ESCAPE_RE = re.compile(
+    r'\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-Z\\-_]|[\(\)][A-Za-z0-9])'
+)
 
 def visible_len(text: str) -> int:
     return len(ANSI_ESCAPE_RE.sub('', text))
 
 
 
+# -----------------------------------------------------------------------------
+# Core Game Constants (Domain / Rules)
+# -----------------------------------------------------------------------------
+
+COL_LIST = list('ABCDEFGHIJKL')
+ROW_LIST = list('123456789')
+
+MAP_PRINT_SPACE = '  '
+MAP_HEADER = f' {MAP_PRINT_SPACE}{MAP_PRINT_SPACE.join(COL_LIST)}'
+MAP_WIDTH = len(MAP_HEADER) + len(MAP_PRINT_SPACE)
+
+STAR = '*'
+OUTPOST = '+'
+EMPTY_SPACE = '.'
+MAX_MOVES = 5
+
+STARTING_CASH = 6000
+STARTING_SHARE_PRICE = 100
+OUTPOST_BONUS = 100
+STAR_BONUS = 500
+FOUNDERS_BONUS_SHARES = 5
+TWO_FOR_ONE_PRICE = 3000
+DIVIDEND_MULTIPLIER = 0.05
+
+# BASIC rule: merger cash bonus is 10x losing share price,
+# prorated by ownership and truncated to integer
+BASIC_MERGER_CASH_MULTIPLIER = 10
+
+# ANSI terminal bold and reset sequences for display formatting
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
+# Dictionary of company names and map symbols
+COMPANIES = {
+            'Altair Starways': 'A',
+            'Betelgeuse Ltd.': 'B',
+            'Capella Freight Co.': 'C',
+            'Denebola Shippers': 'D',
+            'Eridani Expediters': 'E'
+        }
+
+COMPANY_COLORS = {
+    'A': 'red',
+    'B': 'green',
+    'C': 'yellow',
+    'D': 'blue',
+    'E': 'magenta',
+}
+
+CREATE_COMPANY_SYMBOLS = set((STAR, OUTPOST))
+COMPANY_SYMBOLS = set((COMPANIES.values()))
+OCCUPIED_MAP_SYMBOLS = CREATE_COMPANY_SYMBOLS.union(COMPANY_SYMBOLS)
+
+
+# -----------------------------------------------------------------------------
+# Domain Types and Tile Classification
+# -----------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class Neighborhood:
+    center: str
+    neighbors: Dict[str, str]
+    stars: int
+    outposts: int
+    companies: Set[str]
+
+
+class TileKind(Enum):
+    EMPTY = auto()
+    STAR = auto()
+    OUTPOST = auto()
+    COMPANY = auto()
+
+
+def tile_kind_from_symbol(symbol):
+    if symbol == EMPTY_SPACE:
+        return TileKind.EMPTY
+    if symbol == STAR:
+        return TileKind.STAR
+    if symbol == OUTPOST:
+        return TileKind.OUTPOST
+    if symbol in COMPANY_SYMBOLS:
+        return TileKind.COMPANY
+    raise ValueError(f"Unknown map symbol: {symbol}")
+
+
+# -----------------------------------------------------------------------------
+# Economic Diagnostics (Debug Logging)
+# -----------------------------------------------------------------------------
+
 # Economic event logging (diagnostic only).
 # Used to inspect game economy behavior during testing.
 # Safe to disable or remove without affecting gameplay.
-# Set DEBUG_ECON in trade_main.py to True to enable logging of economic events, which will be written as JSON lines
-# into ECON_LOG_FILE.
+# Set DEBUG_ECON in trade_main.py to True to enable logging of economic events,
+# which will be written as JSON lines into ECON_LOG_FILE.
 
 ECON_LOG_FILE = 'econ_events.log'
 
@@ -73,173 +165,6 @@ def log_econ_event(turn_number, event_type, company_symbols, players=None,
     }
     with open(ECON_LOG_FILE, 'a', encoding='utf-8') as log_file:
         log_file.write(json.dumps(payload, sort_keys=True) + '\n')
-
-
-@dataclass(frozen=True)
-class Neighborhood:
-    center: str
-    neighbors: Dict[str, str]
-    stars: int
-    outposts: int
-    companies: Set[str]
-
-
-
-# CONSTANTS
-
-COL_LIST = list('ABCDEFGHIJKL')
-ROW_LIST = list('123456789')
-
-MAP_PRINT_SPACE = '  '
-
-
-
-class TileKind(Enum):
-    EMPTY = auto()
-    STAR = auto()
-    OUTPOST = auto()
-    COMPANY = auto()
-
-def tile_kind_from_symbol(symbol):
-    if symbol == EMPTY_SPACE:
-        return TileKind.EMPTY
-    if symbol == STAR:
-        return TileKind.STAR
-    if symbol == OUTPOST:
-        return TileKind.OUTPOST
-    if symbol in COMPANY_SYMBOLS:
-        return TileKind.COMPANY
-    raise ValueError(f"Unknown map symbol: {symbol}")
-
-# ANSI terminal bold and reset sequences for display formatting
-
-BOLD = "\033[1m"
-RESET = "\033[0m"
-
-COMPANY_COLORS = {
-    'A': 'red',
-    'B': 'green',
-    'C': 'yellow',
-    'D': 'blue',
-    'E': 'magenta',
-}
-
-
-STAR = '*'
-OUTPOST = '+'
-EMPTY_SPACE = '.'
-MAX_MOVES = 5
-
-
-STARTING_CASH = 6000
-STARTING_SHARE_PRICE = 100
-OUTPOST_BONUS = 100
-STAR_BONUS = 500
-FOUNDERS_BONUS_SHARES = 5
-TWO_FOR_ONE_PRICE = 3000
-DIVIDEND_MULTIPLIER = 0.05
-
-# BASIC rule: merger cash bonus is 10× losing share price,
-# prorated by ownership and truncated to integer
-BASIC_MERGER_CASH_MULTIPLIER = 10
-
-MAP_HEADER = f' {MAP_PRINT_SPACE}{MAP_PRINT_SPACE.join(COL_LIST)}'
-MAP_WIDTH = len(MAP_HEADER) + len(MAP_PRINT_SPACE)
-MINI_PORTFOLIO_SPACER = '  |  '
-MINI_PORTFOLIO_UNDERSCORE = '_' * 22
-
-# Special Announcement Strings
-
-SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL = '*'
-SPECIAL_ANNOUNCEMENT_TOP_SYMBOL = '='
-SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL = '='
-SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL = '-'
-SPECIAL_ANNOUNCEMENT_LEFT_GUTTER = 1
-SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER = 3   # try 2 first; 3 if you want it looser
-
-SPECIAL_ANNOUNCEMENT_WIDTH = 61
-SPECIAL_ANNOUNCEMENT_TEXT_WIDTH = (
-    SPECIAL_ANNOUNCEMENT_WIDTH
-    - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
-    - SPECIAL_ANNOUNCEMENT_LEFT_GUTTER
-    - SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER
-)
-SPECIAL_ANNOUNCEMENT_HEADER = SPECIAL_ANNOUNCEMENT_TOP_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
-SPECIAL_ANNOUNCEMENT_FOOTER = SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
-
-SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE = (
-    SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL
-    * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH + 2)
-)
-
-SPECIAL_ANNOUNCEMENT_HEADER_LINE = 'SPECIAL ANNOUNCEMENT!!!'
-SPECIAL_ANNOUNCEMENT_PLEASE_NOTE = 'Please note the following transactions:'
-
-NEW_COMPANY_PHRASE = 'A new company has been formed!'
-
-TWO_FOR_ONE_PHRASES = ['The stock of', 'has split 2:1!']
-TWO_FOR_ONE_CATEGORIES = ['Player', 'Old Holdings', 'New Holdings']
-TWO_FOR_ONE_COLUMNS = ['p.name[:TWO_FOR_ONE_PLAYER_NAME_LENGTH]',
-                       'str(p.old_data_for_display)',
-                       'str(p.portfolio[company.symbol])'
-                    ]
-
-TWO_FOR_ONE_PLAYER_NAME_LENGTH = (SPECIAL_ANNOUNCEMENT_WIDTH - 2)//len(TWO_FOR_ONE_COLUMNS) - 1
-
-
-MERGER_PHRASE = 'has just been merged into'
-MERGER_CATEGORIES = ['Player', 'Old Stock', 'New Stock', 'Bonus']
-MERGER_COLUMNS = ['p.name[:MERGER_PLAYER_NAME_LENGTH]',
-                  'str(p.portfolio[losing_company.symbol])',
-                  'str(p.portfolio[company.symbol])',
-                  'locale.currency(p.old_data_for_display, grouping=True)'
-                ]
-
-MERGER_PLAYER_NAME_LENGTH = (SPECIAL_ANNOUNCEMENT_WIDTH - 2)//len(MERGER_COLUMNS) - 1
-
-GAME_OVER_PHRASES = ['The game has ended!', 'Here are the standings:']
-GAME_OVER_CATEGORIES = ['Player', 'Cash', 'Stocks', 'Net Worth']
-GAME_OVER_COLUMNS = ['p.name[:GAME_OVER_PLAYER_NAME_LENGTH]',
-                     'p.str_cash_on_hand',
-                    'p.str_stock_value',
-                    'p.str_net_worth'
-                ]
-GAME_OVER_PLAYER_NAME_LENGTH = (SPECIAL_ANNOUNCEMENT_WIDTH - 2)//len(GAME_OVER_COLUMNS) - 1
-
-STD_CAT_ALIGNMENT = ['c', 'r', 'r', 'r']
-
-# Dictionary of company names and map symbols
-COMPANIES = {
-            'Altair Starways': 'A',
-            'Betelgeuse Ltd.': 'B',
-            'Capella Freight Co.': 'C',
-            'Denebola Shippers': 'D',
-            'Eridani Expediters': 'E'
-        }
-
-
-CREATE_COMPANY_SYMBOLS = set((STAR, OUTPOST))
-COMPANY_SYMBOLS = set((COMPANIES.values()))
-OCCUPIED_MAP_SYMBOLS = CREATE_COMPANY_SYMBOLS.union(COMPANY_SYMBOLS)
-
-
-# *** Classes for announcement components ***
-class AnnouncementLine:
-    """Base class for lines in announcements, to allow for different types of content and formatting in a structured way."""
-    pass
-
-class ContentLine(AnnouncementLine):
-    def __init__(self, text, alignment = 'c'):
-        self.text = text
-        self.alignment = alignment
-
-class RuleLine(AnnouncementLine):
-    """Horizontal rule inside announcements, to separate content from player info."""
-    pass
-
-class BlankLine(AnnouncementLine):
-    """Blank line inside announcements."""
-    pass
 
 
 
@@ -303,7 +228,7 @@ class Player():
         term = self.game.terminal
         for symbol in sorted(self.game.active_companies.keys()):
             c = self.game.active_companies[symbol]
-            self.game.display.display_map(self.portfolio_for_map)
+            self.game.display.display_map(self)
             formatted_name = term.color(c.name, fg=COMPANY_COLORS[c.symbol]) if term.supports_color else c.name
 
             while True:
@@ -370,48 +295,16 @@ class Player():
                     )
                 
                 # Refresh display so player sees updated portfolio and done with this company
-                self.game.display.display_map(self.portfolio_for_map)
+                self.game.display.display_map(self)
                 break
+
+
+
 
 
     @property
     def sorted_portfolio(self):
         return OrderedDict(sorted(self.portfolio.items()))
-
-    @property
-    def portfolio_for_map(self):
-        '''
-        Returns 9 line portfolio matching main display requirements:
-            A:  20 @    $200
-            B:  10 @    $500
-            C:   0 @  $1,000
-            D: 100 @  $2,990
-            E:   0 @  $1,000
-         Stocks:     $10,000
-         Cash:      $115,000
-         ___________________
-         Total:   $1,111,111
-        '''
-        
-        term = self.game.terminal
-
-        s, c, t, p = 'Stocks:', 'Cash:', 'Total:', []
-        for k in sorted(self.game.active_companies.keys()):
-            if term.supports_color and k in COMPANY_COLORS:
-                symbol = term.color(k, fg=COMPANY_COLORS[k])
-            else:
-                symbol = k
-
-            p.append(f'{MINI_PORTFOLIO_SPACER} {symbol:>4}: {self.portfolio[k]:>3} @ {locale.currency(self.game.active_companies[k].share_price, grouping=True):>10}')
-        
-        p.append(f'{MINI_PORTFOLIO_SPACER}{s:>6} {locale.currency(self.stock_value, grouping=True):>14}')
-        p.append(f'{MINI_PORTFOLIO_SPACER}{c:>7} {locale.currency(self.cash_on_hand, grouping=True):>14}')
-        p.append(f'{MINI_PORTFOLIO_SPACER}{MINI_PORTFOLIO_UNDERSCORE}')
-        p.append(f'{MINI_PORTFOLIO_SPACER}{t:>6} {locale.currency(self.net_worth, grouping=True):>15}')
-
-        for i in range(0, (len(ROW_LIST) - len(p))):
-            p.append(f'{MINI_PORTFOLIO_SPACER}')
-        return p
 
 
 
@@ -465,7 +358,7 @@ class Company():
         self.attach_square(nsew)
         self.game.display.display_new_company(self)
         self.game.display.any_to_continue()
-        self.game.display.display_map(player.portfolio_for_map)
+        self.game.display.display_map(player)
 
     @property
     def outposts(self):
@@ -795,7 +688,7 @@ class Company():
 
 class Game():
 
-    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, debug_econ=False):
+    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, headless = False, pause_at_end=True, debug_econ=False):
         self.turn_number = 1
         self.number_of_players = number_of_players
         self.display = Display(self)
@@ -804,12 +697,13 @@ class Game():
         self.max_turns = max_turns
         self.last_action = None
         self.active_player = None
+        self.headless = headless
         self.interactive = interactive
         self.autopilot = autopilot
         self.debug_econ = debug_econ
-        
+        self.pause_at_end = pause_at_end
     
-        if self.interactive:
+        if not self.autopilot and self.interactive:
             resp = input("View instructions? (Y/n): ").strip().upper()
             if resp in ("", "Y"):
                 self.display.display_instructions()
@@ -840,7 +734,7 @@ class Game():
         self.play_move(player, move)
 
         self.pay_dividends(player)
-        self.display.display_map(player.portfolio_for_map)
+        self.display.display_map(player)
 
         if self.active_companies:
 
@@ -888,7 +782,7 @@ class Game():
             self.active_player = player
             # last_action is scoped to the active player only
             self.last_action = None
-            self.display.display_map(player.portfolio_for_map)
+            self.display.display_map(player)
             self.execute_turn(player, autopilot=self.autopilot)
         
         self.turn_number +=1
@@ -1075,7 +969,7 @@ class Game():
 
         self.display.display_end_of_game()
 
-        if self.interactive:
+        if self.pause_at_end and not self.headless:
             print("Hit return/enter to quit.")
             input()
         
@@ -1263,6 +1157,101 @@ class Map():
         return(f'{self.map}')
 
 
+# -----------------------------------------------------------------------------
+# Display Constants and Formatting Types
+# -----------------------------------------------------------------------------
+
+PORTFOLIO_SPACER = '  |  '
+PORTFOLIO_UNDERSCORE = '_' * 22
+
+PORTFOLIO_LABEL_WIDTH = 7
+PORTFOLIO_QTY_WIDTH = 3
+PORTFOLIO_AT = " @ "
+PORTFOLIO_MONEY_WIDTH = 14
+
+# Special announcement strings
+SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL = '*'
+SPECIAL_ANNOUNCEMENT_TOP_SYMBOL = '='
+SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL = '='
+SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL = '-'
+SPECIAL_ANNOUNCEMENT_LEFT_GUTTER = 1
+SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER = 3   # try 2 first; 3 if you want it looser
+
+SPECIAL_ANNOUNCEMENT_WIDTH = 61
+SPECIAL_ANNOUNCEMENT_TEXT_WIDTH = (
+    SPECIAL_ANNOUNCEMENT_WIDTH
+    - len(SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL) * 2
+    - SPECIAL_ANNOUNCEMENT_LEFT_GUTTER
+    - SPECIAL_ANNOUNCEMENT_RIGHT_GUTTER
+)
+SPECIAL_ANNOUNCEMENT_HEADER = SPECIAL_ANNOUNCEMENT_TOP_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
+SPECIAL_ANNOUNCEMENT_FOOTER = SPECIAL_ANNOUNCMENT_BOTTOM_SYMBOL * SPECIAL_ANNOUNCEMENT_WIDTH
+
+SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE = (
+    SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE_SYMBOL
+    * (SPECIAL_ANNOUNCEMENT_TEXT_WIDTH + 2)
+)
+
+SPECIAL_ANNOUNCEMENT_HEADER_LINE = 'SPECIAL ANNOUNCEMENT!!!'
+SPECIAL_ANNOUNCEMENT_PLEASE_NOTE = 'Please note the following transactions:'
+
+NEW_COMPANY_PHRASE = 'A new company has been formed!'
+
+TWO_FOR_ONE_PHRASES = ['The stock of', 'has split 2:1!']
+TWO_FOR_ONE_CATEGORIES = ['Player', 'Old Holdings', 'New Holdings']
+TWO_FOR_ONE_COLUMNS = [
+    'p.name[:TWO_FOR_ONE_PLAYER_NAME_LENGTH]',
+    'str(p.old_data_for_display)',
+    'str(p.portfolio[company.symbol])'
+]
+
+TWO_FOR_ONE_PLAYER_NAME_LENGTH = (SPECIAL_ANNOUNCEMENT_WIDTH - 2)//len(TWO_FOR_ONE_COLUMNS) - 1
+
+MERGER_PHRASE = 'has just been merged into'
+MERGER_CATEGORIES = ['Player', 'Old Stock', 'New Stock', 'Bonus']
+MERGER_COLUMNS = [
+    'p.name[:MERGER_PLAYER_NAME_LENGTH]',
+    'str(p.portfolio[losing_company.symbol])',
+    'str(p.portfolio[company.symbol])',
+    'locale.currency(p.old_data_for_display, grouping=True)'
+]
+
+MERGER_PLAYER_NAME_LENGTH = (SPECIAL_ANNOUNCEMENT_WIDTH - 2)//len(MERGER_COLUMNS) - 1
+
+GAME_OVER_PHRASES = ['The game has ended!', 'Here are the standings:']
+GAME_OVER_CATEGORIES = ['Player', 'Cash', 'Stocks', 'Net Worth']
+GAME_OVER_COLUMNS = [
+    'p.name[:GAME_OVER_PLAYER_NAME_LENGTH]',
+    'p.str_cash_on_hand',
+    'p.str_stock_value',
+    'p.str_net_worth'
+]
+GAME_OVER_PLAYER_NAME_LENGTH = (SPECIAL_ANNOUNCEMENT_WIDTH - 2)//len(GAME_OVER_COLUMNS) - 1
+
+STD_CAT_ALIGNMENT = ['c', 'r', 'r', 'r']
+
+
+class AnnouncementLine:
+    """Base class for lines in announcements."""
+    pass
+
+
+class ContentLine(AnnouncementLine):
+    def __init__(self, text, alignment='c'):
+        self.text = text
+        self.alignment = alignment
+
+
+class RuleLine(AnnouncementLine):
+    """Horizontal rule inside announcements, separating content from player info."""
+    pass
+
+
+class BlankLine(AnnouncementLine):
+    """Blank line inside announcements."""
+    pass
+
+
 class Display():
     '''
     Encapsulates display functions
@@ -1274,12 +1263,47 @@ class Display():
         self.game = game
         '''Lots more stuff here as display gets more complex'''
 
+    @staticmethod
+    def _detect_decimal_column():
+        probe = Display._format_company_row("X:", 0, "$0.00")
+        return visible_len(probe[: probe.index(".")])
+
+    @staticmethod
+    def _money_decimal_column(row):
+        if "." in row:
+            return visible_len(row[: row.index(".")])
+        return visible_len(row)
+
+    @staticmethod
+    def _format_company_row(label, qty, price):
+        return (
+            f'{PORTFOLIO_SPACER}'
+            f'{label:>{PORTFOLIO_LABEL_WIDTH}} '
+            f'{qty:>{PORTFOLIO_QTY_WIDTH}}'
+            f'{PORTFOLIO_AT}'
+            f'{price:>{PORTFOLIO_MONEY_WIDTH}}'
+        )
+
+    @staticmethod
+    def _format_summary_row(label, price, decimal_column=None):
+        prefix = f'{PORTFOLIO_SPACER}{label:>{PORTFOLIO_LABEL_WIDTH}}'
+
+        if decimal_column is None:
+            decimal_column = Display._detect_decimal_column()
+
+        price_decimal = price.index(".") if "." in price else len(price)
+
+        # Align the decimal point (or value end when no cents are present).
+        pad = decimal_column - (visible_len(prefix) + price_decimal)
+
+        return prefix + (" " * pad) + price
+
 
     def input_prompt(self, input_string = "> "):
         return input(input_string)
 
     def any_to_continue(self):
-        if not self.game.interactive:
+        if not self.game.headless:
             return
         input('Press enter key to continue.')
 
@@ -1401,9 +1425,55 @@ class Display():
             )
 
 
-    def display_map(self, player_portfolio):
+    def build_portfolio_for_map(self, player):
+        '''Build mini portfolio lines shown beside the map for the given player.'''
+        term = self.game.terminal
+        portfolio_lines = []
+        summary_decimal_column = None
+
+        for symbol in sorted(self.game.active_companies.keys()):
+            company = self.game.active_companies[symbol]
+
+            if term.supports_color and symbol in COMPANY_COLORS:
+                label = term.color(symbol, fg=COMPANY_COLORS[symbol]) + ":"
+            else:
+                label = symbol + ":"
+
+            price = locale.currency(company.share_price, grouping=True)
+            company_row = self._format_company_row(label, player.portfolio[symbol], price)
+
+            if summary_decimal_column is None:
+                summary_decimal_column = self._money_decimal_column(company_row)
+
+            portfolio_lines.append(company_row)
+
+        if summary_decimal_column is None:
+            summary_decimal_column = self._detect_decimal_column()
+
+        label = "Stocks:"
+        price = locale.currency(player.stock_value, grouping=True)
+        portfolio_lines.append(self._format_summary_row(label, price, summary_decimal_column))
+
+        label = "Cash:"
+        price = locale.currency(player.cash_on_hand, grouping=True)
+        portfolio_lines.append(self._format_summary_row(label, price, summary_decimal_column))
+
+        portfolio_lines.append(f'{PORTFOLIO_SPACER}{PORTFOLIO_UNDERSCORE}')
+
+        label = "Total:"
+        price = locale.currency(player.net_worth, grouping=True)
+        portfolio_lines.append(self._format_summary_row(label, price, summary_decimal_column))
+
+        while len(portfolio_lines) < len(ROW_LIST):
+            portfolio_lines.append(f'{PORTFOLIO_SPACER}')
+
+        return portfolio_lines
+
+
+    def display_map(self, player):
         '''Print map and mini portfolio for standard turn.'''
         term = self.game.terminal
+        player_portfolio = self.build_portfolio_for_map(player)
         map = self.game.map
         print(self.game.terminal.clear())
         turn_line = (
@@ -1413,7 +1483,7 @@ class Display():
         print(turn_line.center(MAP_WIDTH))
         print(f'{("-"*MAP_WIDTH).center(MAP_WIDTH)}')
         portfolio_header = f'*** {self.game.active_player.name}\'s Portfolio ***'
-        header = MAP_HEADER + MINI_PORTFOLIO_SPACER + portfolio_header
+        header = MAP_HEADER + PORTFOLIO_SPACER + portfolio_header
         print(header)
 
         for row_num,row in enumerate(ROW_LIST):
