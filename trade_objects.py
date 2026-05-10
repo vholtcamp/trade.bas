@@ -25,7 +25,9 @@ from dataclasses import dataclass
 
 import re
 no_cents = re.compile(r'.00$')
-ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
+ANSI_ESCAPE_RE = re.compile(
+    r'\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-Z\\-_]|[\(\)][A-Za-z0-9])'
+)
 
 def visible_len(text: str) -> int:
     return len(ANSI_ESCAPE_RE.sub('', text))
@@ -73,6 +75,9 @@ def log_econ_event(turn_number, event_type, company_symbols, players=None,
     }
     with open(ECON_LOG_FILE, 'a', encoding='utf-8') as log_file:
         log_file.write(json.dumps(payload, sort_keys=True) + '\n')
+
+
+
 
 
 @dataclass(frozen=True)
@@ -147,6 +152,88 @@ MAP_HEADER = f' {MAP_PRINT_SPACE}{MAP_PRINT_SPACE.join(COL_LIST)}'
 MAP_WIDTH = len(MAP_HEADER) + len(MAP_PRINT_SPACE)
 MINI_PORTFOLIO_SPACER = '  |  '
 MINI_PORTFOLIO_UNDERSCORE = '_' * 22
+
+
+PORTFOLIO_LABEL_WIDTH = 7
+PORTFOLIO_QTY_WIDTH   = 3
+PORTFOLIO_AT          = " @ "
+PORTFOLIO_MONEY_WIDTH = 14
+
+COMPANY_PREFIX_WIDTH = (
+    PORTFOLIO_LABEL_WIDTH
+    + 1
+    + PORTFOLIO_QTY_WIDTH
+    + len(PORTFOLIO_AT)
+)
+
+PORTFOLIO_MONEY_COLUMN = (
+    PORTFOLIO_LABEL_WIDTH
+    + 1                  # space after label in company rows
+    + PORTFOLIO_QTY_WIDTH
+    + len(PORTFOLIO_AT)
+)
+
+def detect_money_column():
+    test = format_company_row("X:", 0, "$0.00")
+    return visible_len(test[: test.index("$")])
+
+def detect_decimal_column():
+    probe = format_company_row("X:", 0, "$0.00")
+    return visible_len(probe[: probe.index(".")])
+
+
+def money_decimal_column(row):
+    if "." in row:
+        return visible_len(row[: row.index(".")])
+    return visible_len(row)
+
+
+
+
+def format_company_row(label, qty, price):
+    """
+    Format a single company portfolio row.
+
+    label: e.g. "A:" (already colorized if desired)
+    qty: integer share count
+    price: already-formatted currency string
+    """
+    return (
+        f'{MINI_PORTFOLIO_SPACER}'
+        f'{label:>{PORTFOLIO_LABEL_WIDTH}} '
+        f'{qty:>{PORTFOLIO_QTY_WIDTH}}'
+        f'{PORTFOLIO_AT}'
+        f'{price:>{PORTFOLIO_MONEY_WIDTH}}'
+    )
+
+
+def format_summary_row(label, price, decimal_column=None):
+    prefix = f'{MINI_PORTFOLIO_SPACER}{label:>{PORTFOLIO_LABEL_WIDTH}}'
+
+    if decimal_column is None:
+        decimal_column = detect_decimal_column()
+
+    price_decimal = price.index(".") if "." in price else len(price)
+
+    # how many spaces are needed so that the decimal point lands on target decimal column.
+    # If currency has no cents in the active locale, align on the end of the value.
+    pad = decimal_column - (visible_len(prefix) + price_decimal)
+
+    return prefix + (" " * pad) + price
+
+MONEY_COLUMN = detect_money_column()
+
+def debug_row(row, tag):
+    print(tag, row)
+    print(tag, "len:", len(row), "visible_len:", visible_len(row))
+    print(tag, "decimal index:", row.index("."))
+
+
+
+
+
+
+
 
 # Special Announcement Strings
 
@@ -374,9 +461,17 @@ class Player():
                 break
 
 
+
+
+
     @property
     def sorted_portfolio(self):
         return OrderedDict(sorted(self.portfolio.items()))
+
+
+    def money_index(row):
+        return row.index('$')
+
 
     @property
     def portfolio_for_map(self):
@@ -394,20 +489,65 @@ class Player():
         '''
         
         term = self.game.terminal
-
         s, c, t, p = 'Stocks:', 'Cash:', 'Total:', []
+        summary_decimal_column = None
         for k in sorted(self.game.active_companies.keys()):
             if term.supports_color and k in COMPANY_COLORS:
-                symbol = term.color(k, fg=COMPANY_COLORS[k])
+                label = term.color(k, fg=COMPANY_COLORS[k]) + ":"
             else:
-                symbol = k
+                label = k + ":"
 
-            p.append(f'{MINI_PORTFOLIO_SPACER} {symbol:>4}: {self.portfolio[k]:>3} @ {locale.currency(self.game.active_companies[k].share_price, grouping=True):>10}')
+            price = locale.currency(
+                self.game.active_companies[k].share_price,
+                grouping=True
+            )
+
+            company_row = format_company_row(
+                label,
+                self.portfolio[k],
+                price
+            )
+            if summary_decimal_column is None:
+                summary_decimal_column = money_decimal_column(company_row)
+
+            p.append(company_row)
+
+        if summary_decimal_column is None:
+            summary_decimal_column = detect_decimal_column()
+
+
+
+        label = "Stocks:"
+        price = locale.currency(self.stock_value, grouping=True)
+        p.append(
+            format_summary_row(
+                label,
+                price,
+                summary_decimal_column
+            )
+        )
+
+        label = "Cash:"
+        price = locale.currency(self.cash_on_hand, grouping=True)
+        p.append(
+            format_summary_row(
+                label,
+                price,
+                summary_decimal_column
+            )
+        )
         
-        p.append(f'{MINI_PORTFOLIO_SPACER}{s:>6} {locale.currency(self.stock_value, grouping=True):>14}')
-        p.append(f'{MINI_PORTFOLIO_SPACER}{c:>7} {locale.currency(self.cash_on_hand, grouping=True):>14}')
         p.append(f'{MINI_PORTFOLIO_SPACER}{MINI_PORTFOLIO_UNDERSCORE}')
-        p.append(f'{MINI_PORTFOLIO_SPACER}{t:>6} {locale.currency(self.net_worth, grouping=True):>15}')
+        
+        label = "Total:"
+        price = locale.currency(self.net_worth, grouping=True)
+        p.append(
+            format_summary_row(
+                label,
+                price,
+                summary_decimal_column
+            )
+        )
 
         for i in range(0, (len(ROW_LIST) - len(p))):
             p.append(f'{MINI_PORTFOLIO_SPACER}')
@@ -795,7 +935,7 @@ class Company():
 
 class Game():
 
-    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, debug_econ=False):
+    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, headless = False, pause_at_end=True, debug_econ=False):
         self.turn_number = 1
         self.number_of_players = number_of_players
         self.display = Display(self)
@@ -804,12 +944,13 @@ class Game():
         self.max_turns = max_turns
         self.last_action = None
         self.active_player = None
+        self.headless = headless
         self.interactive = interactive
         self.autopilot = autopilot
         self.debug_econ = debug_econ
-        
+        self.pause_at_end = pause_at_end
     
-        if self.interactive:
+        if not self.autopilot and self.interactive:
             resp = input("View instructions? (Y/n): ").strip().upper()
             if resp in ("", "Y"):
                 self.display.display_instructions()
@@ -1075,7 +1216,7 @@ class Game():
 
         self.display.display_end_of_game()
 
-        if self.interactive:
+        if self.pause_at_end and not self.headless:
             print("Hit return/enter to quit.")
             input()
         
@@ -1279,7 +1420,7 @@ class Display():
         return input(input_string)
 
     def any_to_continue(self):
-        if not self.game.interactive:
+        if not self.game.headless:
             return
         input('Press enter key to continue.')
 

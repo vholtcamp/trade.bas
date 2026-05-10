@@ -4,13 +4,17 @@ Blessings-based terminal backend for Unix-like systems.
 
 from blessings import Terminal
 from .base import TerminalBase
+from terminal.colors import ColorScheme
 
 
 class BlessingsTerminal(TerminalBase):
     supports_color = True
 
-    def __init__(self):
+    def __init__(self, color_scheme=ColorScheme.DEFAULT):
+        self.supports_color = True
+        self.color_scheme = color_scheme
         self.term = Terminal()
+
 
     def clear(self) -> str:
         return self.term.clear()

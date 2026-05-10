@@ -4,16 +4,23 @@ Container for trade game
 import sys
 from trade_objects import Game
 import platform
+from terminal.colors import ColorScheme
+
 
 
 # *** Set modes here ***
 # Standard play is autopilot = False and interactive = True, which allows user input and interaction.
-autopilot = True   # Game selects moves and stock purchases when True; can ask for user input
-interactive = False # Will allow user interaction, even if autopilot is true
+
+headless = False        # True for CI / automation
+interactive = not headless
+autopilot = True   # Game selects moves and stock purchases when True; can ask for user input if not headless/interactive
+pause_at_end = True   # If True, will prompt user to hit enter at end of game
+
+
+
 
 MAX_PLAYERS = 4
 TOTAL_TURNS = 49
-
 
 
 if platform.system() == 'Windows':

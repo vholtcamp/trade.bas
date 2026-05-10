@@ -1,6 +1,7 @@
 import os
 import subprocess
 from contextlib import nullcontext
+from terminal.colors import ColorScheme
 
 
 try:
@@ -12,8 +13,9 @@ except ImportError:
 
 
 class WindowsTerminal:
-    def __init__(self, use_color=True):
+    def __init__(self, use_color=True, color_scheme=ColorScheme.DEFAULT):
         self.supports_color = COLORAMA_AVAILABLE and use_color
+        self.color_scheme = color_scheme
 
     def clear(self):
         subprocess.run('cls', shell=True)
