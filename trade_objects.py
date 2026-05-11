@@ -62,10 +62,6 @@ DIVIDEND_MULTIPLIER = 0.05
 # prorated by ownership and truncated to integer
 BASIC_MERGER_CASH_MULTIPLIER = 10
 
-# ANSI terminal bold and reset sequences for display formatting
-BOLD = "\033[1m"
-RESET = "\033[0m"
-
 # Dictionary of company names and map symbols
 COMPANIES = {
             'Altair Starways': 'A',
