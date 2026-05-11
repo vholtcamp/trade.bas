@@ -94,6 +94,33 @@ def test_execute_turn_manual_mode_prompts_for_stock_purchase(game_factory, monke
     assert player.cash_on_hand == STARTING_CASH
 
 
+def test_execute_turn_autopilot_can_render_real_map_output(game_factory, monkeypatch, capsys):
+    game = game_factory(interactive=False, autopilot=True)
+    player = game.players[0]
+    game.active_player = player
+
+    company = SimpleNamespace(symbol="T", name="Test Company", share_price=100)
+    game.active_companies = OrderedDict([(company.symbol, company)])
+
+    monkeypatch.setattr(game, "_get_legal_moves", lambda _map: ["A1"])
+    monkeypatch.setattr(player, "choose_move", lambda legal_moves, autopilot: legal_moves[0])
+    monkeypatch.setattr(game, "play_move", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game, "pay_dividends", lambda *_args, **_kwargs: None)
+
+    # game_factory stubs display_map; restore the real rendering method for this test.
+    game.display.display_map = trade_objects.Display.display_map.__get__(
+        game.display,
+        trade_objects.Display,
+    )
+
+    game.execute_turn(player, autopilot=True)
+
+    out = capsys.readouterr().out
+    assert "Turn " in out
+    assert "Portfolio" in out
+    assert game.last_action.startswith("Autopilot purchased")
+
+
 @pytest.mark.interactive
 def test_constructor_interactive_mode_uses_fixture_local_responses(monkeypatch, scripted_input):
     instruction_calls = []
