@@ -705,7 +705,8 @@ class Game():
 
             
             # Clear instructions before player setup
-            print(self.terminal.clear())
+            if not self.monochrome:
+                print(self.terminal.clear())
 
             for i in range(1, number_of_players + 1):
                 print(f'Player {i}, what is your name? ', end = '')
@@ -1263,6 +1264,11 @@ class Display():
     def colors_enabled(self):
         return self.game.terminal.supports_color and not self.monochrome
 
+    def _clear_screen(self):
+        if self.monochrome:
+            return ""
+        return self.game.terminal.clear()
+
     def company_color(self, symbol):
         return get_company_color(symbol, self.color_scheme)
 
@@ -1306,7 +1312,7 @@ class Display():
         return input(input_string)
 
     def any_to_continue(self):
-        if not self.game.headless:
+        if self.game.headless:
             return
         input('Press enter key to continue.')
 
@@ -1333,7 +1339,7 @@ class Display():
 
 
     def display_announcement (self, lines, player_info = None, company = None, losing_company = None, alignment = 'c'):
-        print(self.game.terminal.clear())
+        print(self._clear_screen())
         self._print_announcement_header()
         
         for line in lines:
@@ -1483,7 +1489,7 @@ class Display():
         term = self.game.terminal
         player_portfolio = self.build_portfolio_for_map(player)
         map = self.game.map
-        print(self.game.terminal.clear())
+        print(self._clear_screen())
         turn_line = (
             f"Turn {self.game.turn_number} of {self.game.max_turns} — "
             f"{self.game.active_player.name}'s turn"
@@ -1633,7 +1639,7 @@ class Display():
 
             # If paragraph won't fit on this page, show page first
             if current_page and current_count + para_height > max_lines:
-                print(self.game.terminal.clear())
+                print(self._clear_screen())
                 for line in current_page:
                     print(line)
                 if self.game.interactive:
@@ -1648,7 +1654,7 @@ class Display():
 
         # Print final page
         if current_page:
-            print(self.game.terminal.clear())
+            print(self._clear_screen())
             for line in current_page:
                 print(line)
 

@@ -3,6 +3,7 @@ Container for trade game
 '''
 import argparse
 import sys
+from contextlib import nullcontext
 from trade_objects import Game
 import platform
 import os
@@ -37,7 +38,8 @@ interactive = not headless
 autopilot = True   # Game selects moves and stock purchases when True; can ask for user input if not headless/interactive
 pause_at_end = not headless   # If True, will prompt user to hit enter at end of game
 monochrome = args.monochrome
-color_scheme = ColorScheme(args.color_scheme)
+requested_color_scheme = ColorScheme(args.color_scheme)
+color_scheme = ColorScheme.DEFAULT if monochrome else requested_color_scheme
 
 
 
@@ -48,7 +50,7 @@ TOTAL_TURNS = 49
 
 if platform.system() == 'Windows':
     from terminal.windows_terminal import WindowsTerminal
-    term = WindowsTerminal(color_scheme=color_scheme)
+    term = WindowsTerminal(use_color=not monochrome, color_scheme=color_scheme)
 else:
     from terminal.blessings_term import BlessingsTerminal
     term = BlessingsTerminal(color_scheme=color_scheme)
@@ -56,7 +58,9 @@ else:
 
 # Shall we play a game?
 
-with term.fullscreen():
+fullscreen_context = nullcontext() if monochrome else term.fullscreen()
+
+with fullscreen_context:
     
     if not autopilot:
 
