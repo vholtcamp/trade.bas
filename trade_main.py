@@ -1,6 +1,7 @@
 '''
 Container for trade game
 '''
+import argparse
 import sys
 from trade_objects import Game
 import platform
@@ -12,10 +13,31 @@ from terminal.colors import ColorScheme
 # *** Set modes here ***
 # Standard play is autopilot = False and interactive = True, which allows user input and interaction.
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run Star Traders")
+    parser.add_argument(
+        "--monochrome",
+        action="store_true",
+        help="Disable ANSI color output",
+    )
+    parser.add_argument(
+        "--color-scheme",
+        choices=[scheme.value for scheme in ColorScheme],
+        default=ColorScheme.DEFAULT.value,
+        help="Select color scheme",
+    )
+    return parser.parse_args()
+
+
+args = parse_args()
+
 headless = os.environ.get('TRADE_HEADLESS', '').lower() in ('1', 'true', 'yes')  # set TRADE_HEADLESS=1 for CI
 interactive = not headless
 autopilot = True   # Game selects moves and stock purchases when True; can ask for user input if not headless/interactive
 pause_at_end = not headless   # If True, will prompt user to hit enter at end of game
+monochrome = args.monochrome
+color_scheme = ColorScheme(args.color_scheme)
 
 
 
@@ -26,10 +48,10 @@ TOTAL_TURNS = 49
 
 if platform.system() == 'Windows':
     from terminal.windows_terminal import WindowsTerminal
-    term = WindowsTerminal()
+    term = WindowsTerminal(color_scheme=color_scheme)
 else:
     from terminal.blessings_term import BlessingsTerminal
-    term = BlessingsTerminal()
+    term = BlessingsTerminal(color_scheme=color_scheme)
 
 
 # Shall we play a game?
@@ -66,6 +88,8 @@ with term.fullscreen():
                 autopilot=autopilot,
                 headless=headless,
                 pause_at_end=pause_at_end,
+                monochrome=monochrome,
+                color_scheme=color_scheme,
                 debug_econ=False
                 )
 
