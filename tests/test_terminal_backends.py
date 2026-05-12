@@ -1,8 +1,13 @@
 from terminal.windows_terminal import WindowsTerminal
-from terminal.blessings_term import BlessingsTerminal
 import sys
 import pytest
-from contextlib import contextmanager
+
+try:
+    from terminal.blessings_term import BlessingsTerminal
+    BLESSINGS_AVAILABLE = True
+except (ImportError, Exception):
+    BlessingsTerminal = None
+    BLESSINGS_AVAILABLE = False
 
 
 def test_windows_terminal_implements_base_contract_surface():
@@ -40,7 +45,7 @@ def test_windows_terminal_unknown_color_name_does_not_crash():
     assert "X" in rendered
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="blessings library not available on Windows")
+@pytest.mark.skipif(not BLESSINGS_AVAILABLE, reason="blessings library not available")
 def test_blessings_terminal_contract_surface_and_basic_rendering():
     term = BlessingsTerminal()
 
@@ -57,7 +62,7 @@ def test_blessings_terminal_contract_surface_and_basic_rendering():
     assert "X" in unknown_color_text
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="blessings library not available on Windows")
+@pytest.mark.skipif(not BLESSINGS_AVAILABLE, reason="blessings library not available")
 def test_blessings_terminal_get_size_reports_positive_dimensions():
     term = BlessingsTerminal()
 
@@ -77,7 +82,7 @@ def test_windows_terminal_fullscreen_returns_context_manager():
         pass
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="blessings library not available on Windows")
+@pytest.mark.skipif(not BLESSINGS_AVAILABLE, reason="blessings library not available")
 def test_blessings_terminal_fullscreen_returns_context_manager():
     term = BlessingsTerminal()
 
@@ -98,7 +103,7 @@ def test_windows_terminal_input_wraps_builtin(monkeypatch):
     assert result == "test_response"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="blessings library not available on Windows")
+@pytest.mark.skipif(not BLESSINGS_AVAILABLE, reason="blessings library not available")
 def test_blessings_terminal_input_wraps_builtin(monkeypatch):
     term = BlessingsTerminal()
 
@@ -120,7 +125,7 @@ def test_windows_terminal_color_and_bold_stack_safely():
     assert isinstance(result, str)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="blessings library not available on Windows")
+@pytest.mark.skipif(not BLESSINGS_AVAILABLE, reason="blessings library not available")
 def test_blessings_terminal_color_and_bold_stack_safely():
     term = BlessingsTerminal()
 
@@ -151,7 +156,7 @@ def test_windows_terminal_colorama_unavailable_fallback_safe():
         assert term.color("X", fg="red") == "X"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="blessings library not available on Windows")
+@pytest.mark.skipif(not BLESSINGS_AVAILABLE, reason="blessings library not available")
 def test_blessings_terminal_clear_returns_string():
     term = BlessingsTerminal()
 
@@ -166,9 +171,14 @@ def test_windows_terminal_clear_returns_string():
     assert isinstance(result, str)
 
 
-def test_both_terminals_support_color_property_is_boolean():
+def test_windows_terminal_supports_color_property_is_boolean():
     windows_term = WindowsTerminal(use_color=False)
-    blessings_term = BlessingsTerminal()
 
     assert isinstance(windows_term.supports_color, bool)
+
+
+@pytest.mark.skipif(not BLESSINGS_AVAILABLE, reason="blessings library not available")
+def test_blessings_terminal_supports_color_property_is_boolean():
+    blessings_term = BlessingsTerminal()
+
     assert isinstance(blessings_term.supports_color, bool)

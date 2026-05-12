@@ -4,6 +4,7 @@ Container for trade game
 import sys
 from trade_objects import Game
 import platform
+import os
 from terminal.colors import ColorScheme
 
 
@@ -11,10 +12,10 @@ from terminal.colors import ColorScheme
 # *** Set modes here ***
 # Standard play is autopilot = False and interactive = True, which allows user input and interaction.
 
-headless = False        # True for CI / automation
+headless = os.environ.get('TRADE_HEADLESS', '').lower() in ('1', 'true', 'yes')  # set TRADE_HEADLESS=1 for CI
 interactive = not headless
 autopilot = True   # Game selects moves and stock purchases when True; can ask for user input if not headless/interactive
-pause_at_end = True   # If True, will prompt user to hit enter at end of game
+pause_at_end = not headless   # If True, will prompt user to hit enter at end of game
 
 
 
@@ -63,6 +64,8 @@ with term.fullscreen():
                 max_turns, 
                 interactive=interactive,  
                 autopilot=autopilot,
+                headless=headless,
+                pause_at_end=pause_at_end,
                 debug_econ=False
                 )
 
