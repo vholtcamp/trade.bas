@@ -19,6 +19,7 @@ from random import randint
 
 from enum import Enum, auto
 from typing import Dict, Set
+from terminal.colors import ColorScheme, get_company_color
 
 from dataclasses import dataclass
 
@@ -70,14 +71,6 @@ COMPANIES = {
             'Denebola Shippers': 'D',
             'Eridani Expediters': 'E'
         }
-
-COMPANY_COLORS = {
-    'A': 'red',
-    'B': 'green',
-    'C': 'yellow',
-    'D': 'blue',
-    'E': 'magenta',
-}
 
 CREATE_COMPANY_SYMBOLS = set((STAR, OUTPOST))
 COMPANY_SYMBOLS = set((COMPANIES.values()))
@@ -225,7 +218,10 @@ class Player():
         for symbol in sorted(self.game.active_companies.keys()):
             c = self.game.active_companies[symbol]
             self.game.display.display_map(self)
-            formatted_name = term.color(c.name, fg=COMPANY_COLORS[c.symbol]) if term.supports_color else c.name
+            if self.game.display.colors_enabled:
+                formatted_name = term.color(c.name, fg=self.game.display.company_color(c.symbol))
+            else:
+                formatted_name = c.name
 
             while True:
                 shares_raw = self.game.display.prompt_stock_purchase(c, self)
@@ -684,10 +680,10 @@ class Company():
 
 class Game():
 
-    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, headless = False, pause_at_end=True, debug_econ=False):
+    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, headless = False, pause_at_end=True, monochrome=False, color_scheme=ColorScheme.DEFAULT, debug_econ=False):
         self.turn_number = 1
         self.number_of_players = number_of_players
-        self.display = Display(self)
+        self.display = Display(self, monochrome=monochrome, color_scheme=color_scheme)
         self.players = []
         self.terminal = terminal
         self.max_turns = max_turns
@@ -696,6 +692,8 @@ class Game():
         self.headless = headless
         self.interactive = interactive
         self.autopilot = autopilot
+        self.monochrome = monochrome
+        self.color_scheme = color_scheme
         self.debug_econ = debug_econ
         self.pause_at_end = pause_at_end
     
@@ -707,7 +705,8 @@ class Game():
 
             
             # Clear instructions before player setup
-            print(self.terminal.clear())
+            if not self.monochrome:
+                print(self.terminal.clear())
 
             for i in range(1, number_of_players + 1):
                 print(f'Player {i}, what is your name? ', end = '')
@@ -1255,9 +1254,23 @@ class Display():
     Could later do a version for pygame
     '''
 
-    def __init__(self, game):
+    def __init__(self, game, monochrome=False, color_scheme=ColorScheme.DEFAULT):
         self.game = game
+        self.monochrome = monochrome
+        self.color_scheme = color_scheme
         '''Lots more stuff here as display gets more complex'''
+
+    @property
+    def colors_enabled(self):
+        return self.game.terminal.supports_color and not self.monochrome
+
+    def _clear_screen(self):
+        if self.monochrome:
+            return ""
+        return self.game.terminal.clear()
+
+    def company_color(self, symbol):
+        return get_company_color(symbol, self.color_scheme)
 
     @staticmethod
     def _detect_decimal_column():
@@ -1299,7 +1312,7 @@ class Display():
         return input(input_string)
 
     def any_to_continue(self):
-        if not self.game.headless:
+        if self.game.headless:
             return
         input('Press enter key to continue.')
 
@@ -1308,9 +1321,14 @@ class Display():
         '''Offer stock to purchase and prompt - return number of shares to buy'''
         term = self.game.terminal
         print(f'')
+
+        if self.colors_enabled:
+            company_name = term.color(company.name, fg=self.company_color(company.symbol))
+        else:
+            company_name = company.name
        
         print(
-            f'Purchase how many shares of {term.color(company.name, fg=COMPANY_COLORS[company.symbol])} '
+            f'Purchase how many shares of {company_name} '
             f'at {company.str_share_price} per share?'
         )
         
@@ -1321,7 +1339,7 @@ class Display():
 
 
     def display_announcement (self, lines, player_info = None, company = None, losing_company = None, alignment = 'c'):
-        print(self.game.terminal.clear())
+        print(self._clear_screen())
         self._print_announcement_header()
         
         for line in lines:
@@ -1361,8 +1379,8 @@ class Display():
         term = self.game.terminal
         plain_name = company.name
         centered_name = self._apply_display_alignment(plain_name, alignment = 'c')
-        if term.supports_color:
-            formatted_name = centered_name.replace(plain_name, term.color(plain_name, fg=COMPANY_COLORS[company.symbol]), 1)
+        if self.colors_enabled:
+            formatted_name = centered_name.replace(plain_name, term.color(plain_name, fg=self.company_color(company.symbol)), 1)
         else:
             formatted_name = centered_name
         self.display_announcement([
@@ -1380,8 +1398,8 @@ class Display():
 
         centered_company = self._apply_display_alignment(plain_company, alignment = 'c')
 
-        if term.supports_color:
-            centered_company = centered_company.replace(plain_company, term.color(plain_company, fg=COMPANY_COLORS[company.symbol]), 1)
+        if self.colors_enabled:
+            centered_company = centered_company.replace(plain_company, term.color(plain_company, fg=self.company_color(company.symbol)), 1)
 
         self.display_announcement([
                                 TWO_FOR_ONE_PHRASES[0],
@@ -1402,9 +1420,9 @@ class Display():
         centered_winner = self._apply_display_alignment(plain_winner, alignment = 'c')
         centered_loser = self._apply_display_alignment(plain_loser, alignment = 'c')
 
-        if term.supports_color:
-            centered_winner = centered_winner.replace(plain_winner, term.color(plain_winner, fg=COMPANY_COLORS[company.symbol]), 1)
-            centered_loser = centered_loser.replace(plain_loser, term.color(plain_loser, fg=COMPANY_COLORS[losing_company.symbol]), 1)
+        if self.colors_enabled:
+            centered_winner = centered_winner.replace(plain_winner, term.color(plain_winner, fg=self.company_color(company.symbol)), 1)
+            centered_loser = centered_loser.replace(plain_loser, term.color(plain_loser, fg=self.company_color(losing_company.symbol)), 1)
 
         self.display_announcement([
                                 centered_loser,
@@ -1430,8 +1448,8 @@ class Display():
         for symbol in sorted(self.game.active_companies.keys()):
             company = self.game.active_companies[symbol]
 
-            if term.supports_color and symbol in COMPANY_COLORS:
-                label = term.color(symbol, fg=COMPANY_COLORS[symbol]) + ":"
+            if self.colors_enabled and symbol in COMPANY_SYMBOLS:
+                label = term.color(symbol, fg=self.company_color(symbol)) + ":"
             else:
                 label = symbol + ":"
 
@@ -1471,7 +1489,7 @@ class Display():
         term = self.game.terminal
         player_portfolio = self.build_portfolio_for_map(player)
         map = self.game.map
-        print(self.game.terminal.clear())
+        print(self._clear_screen())
         turn_line = (
             f"Turn {self.game.turn_number} of {self.game.max_turns} — "
             f"{self.game.active_player.name}'s turn"
@@ -1486,8 +1504,8 @@ class Display():
             print (f'{row}', end ='')
             for char in COL_LIST:
                 symbol = map[char + row]
-                if symbol in COMPANY_COLORS and term.supports_color:
-                    rendered = term.color(symbol, fg=COMPANY_COLORS[symbol])
+                if symbol in COMPANY_SYMBOLS and self.colors_enabled:
+                    rendered = term.color(symbol, fg=self.company_color(symbol))
                 else:
                     rendered = symbol
                 print(f'{MAP_PRINT_SPACE}{rendered}', end='')
@@ -1621,7 +1639,7 @@ class Display():
 
             # If paragraph won't fit on this page, show page first
             if current_page and current_count + para_height > max_lines:
-                print(self.game.terminal.clear())
+                print(self._clear_screen())
                 for line in current_page:
                     print(line)
                 if self.game.interactive:
@@ -1636,7 +1654,7 @@ class Display():
 
         # Print final page
         if current_page:
-            print(self.game.terminal.clear())
+            print(self._clear_screen())
             for line in current_page:
                 print(line)
 

@@ -12,6 +12,7 @@ import pytest
 
 import trade_objects
 from trade_objects import EMPTY_SPACE, Game
+from terminal.colors import ColorScheme
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +35,7 @@ def safe_currency(monkeypatch):
 def game_factory():
     """Create isolated Game instances with explicit execution modes and no display side effects."""
 
-    def _make_game(*, interactive=False, autopilot=True, number_of_players=2, max_turns=50):
+    def _make_game(*, interactive=False, autopilot=True, monochrome=False, color_scheme=ColorScheme.DEFAULT, number_of_players=2, max_turns=50):
         terminal = SimpleNamespace(clear=lambda: "", width=80, height=24, supports_color=False, color=lambda text, **kwargs: text,)
         g = Game(
             number_of_players=number_of_players,
@@ -42,6 +43,8 @@ def game_factory():
             max_turns=max_turns,
             interactive=interactive,
             autopilot=autopilot,
+            monochrome=monochrome,
+            color_scheme=color_scheme,
         )
 
         # Disable UI side effects for all unit tests.

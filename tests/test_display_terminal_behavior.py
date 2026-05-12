@@ -9,6 +9,7 @@ from trade_objects import (
     SPECIAL_ANNOUNCEMENT_TEXT_WIDTH,
     visible_len,
 )
+from terminal.colors import ColorScheme
 
 
 def test_visible_len_strips_csi_and_non_csi_escapes():
@@ -68,6 +69,57 @@ def test_display_map_color_mode_includes_ansi_when_terminal_colors(game, capsys)
 
     out = capsys.readouterr().out
     assert "\x1b[" in out
+
+
+def test_display_map_monochrome_suppresses_ansi_even_when_terminal_supports_color(game_factory, capsys):
+    game = game_factory(monochrome=True)
+    player = game.players[0]
+    game.active_player = player
+    game.map["A1"] = "A"
+
+    game.terminal.supports_color = True
+    game.terminal.color = lambda text, **kwargs: f"\x1b[31m{text}\x1b[0m"
+
+    Display.display_map(game.display, player)
+
+    out = capsys.readouterr().out
+    assert trade_objects.ANSI_ESCAPE_RE.search(out) is None
+
+
+def test_display_map_monochrome_overrides_selected_color_scheme(game_factory, capsys):
+    game = game_factory(monochrome=True, color_scheme=ColorScheme.AMBER)
+    player = game.players[0]
+    game.active_player = player
+    game.map["A1"] = "A"
+
+    game.terminal.supports_color = True
+    game.terminal.color = lambda text, **kwargs: f"\x1b[33m{text}\x1b[0m"
+
+    Display.display_map(game.display, player)
+
+    out = capsys.readouterr().out
+    assert trade_objects.ANSI_ESCAPE_RE.search(out) is None
+
+
+def test_display_map_green_scheme_uses_green_foreground(game_factory):
+    game = game_factory(color_scheme=ColorScheme.GREEN)
+    player = game.players[0]
+    game.active_player = player
+    game.map["A1"] = "A"
+
+    game.terminal.supports_color = True
+    captured_fgs = []
+
+    def fake_color(text, **kwargs):
+        captured_fgs.append(kwargs.get("fg"))
+        return text
+
+    game.terminal.color = fake_color
+
+    Display.display_map(game.display, player)
+
+    assert "green" in captured_fgs
+    assert set(captured_fgs) == {"green"}
 
 
 def test_display_announcement_renders_content_rule_and_blank(game, capsys):

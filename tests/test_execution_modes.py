@@ -43,6 +43,18 @@ def test_any_to_continue_is_noop_when_noninteractive(game, monkeypatch):
     game.display.any_to_continue()
 
 
+def test_any_to_continue_is_noop_when_headless(game_factory, monkeypatch):
+    game = game_factory(interactive=False, autopilot=True)
+    game.headless = True
+
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda prompt="": pytest.fail(f"input() should not be called in headless mode: {prompt}"),
+    )
+
+    game.display.any_to_continue()
+
+
 def test_execute_turn_autopilot_skips_stock_purchase_prompt(game, monkeypatch):
     player = game.players[0]
     company = SimpleNamespace(symbol="T", name="Test Company", share_price=100)
