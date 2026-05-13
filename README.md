@@ -35,11 +35,9 @@ A tile-placement stock purchasing game for 1 - 4 players. Players place tiles on
 
 - *Mergers*: In the original, if two companies were merging and they were tied in terms of outposts, the company alphebetically first would win. I have tweaked this so that the oldest company comes out on top.
 
-- *Colors:* While the original incarnations of the game would all have been in monochrome, this version does use a colorized mode as default, where company symbols and names are rendered in color. (See above for how to tweak color modes to match your preferred retro nostalgia scheme.)
+- *Colors:* While the original incarnations of the game would all have been in monochrome, this version does use a colorized mode as default, where company symbols and names are rendered in color. (See below in command line args for how to tweak color modes to match your preferred retro nostalgia scheme.)
 
 - *Display:* The original version printed only the map each turn, with a special command to display a player's portfolio. This version adds an updated portfolio to the right of the map, so there is no "Display Portfolio" or "Display Map" command. Similarly, the stock purchasing display is tweaked to confirm the previous purchase (or lack thereof) for player reference. 
-
-
 
 
 ## Quick Start
@@ -70,7 +68,7 @@ python3 -m pip install -r requirements.txt
 python3 trade_main.py
 ```
 
-## Runtime Flags and Environment Variables
+## Runtime Flags
 
 ### Command-Line Arguments
 
@@ -84,12 +82,20 @@ python3 trade_main.py
   python3 trade_main.py --color-scheme amber
   ```
 
-### Environment Variables
-
-- `TRADE_HEADLESS`: Set to `1`, `true`, or `yes` to run in headless (non-interactive) autopilot mode. The game will run all turns automatically without waiting for user input. Used in CI testing.
+- `--headless`: Run in non-interactive autoplay mode suitable for CI/smoke runs.
   ```bash
-  TRADE_HEADLESS=1 python3 trade_main.py
+  python3 trade_main.py --headless
   ```
+  Headless is authoritative: it enforces `autopilot=true`, `interactive=false`, and `pause-at-end=false`.
+  Do not combine `--headless` with explicit mode flags.
+
+- `--autopilot {true,false}`: Enable or disable automatic move and stock selection.
+
+- `--interactive {true,false}`: Enable or disable interactive prompts.
+
+- `--pause-at-end {true,false}`: Control whether the game waits for input before exiting.
+
+Default launch behavior is standard manual play: interactive prompts enabled, autopilot off, and pause-at-end on.
 
 ## Running Tests
 

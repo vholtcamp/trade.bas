@@ -6,13 +6,25 @@ import sys
 from contextlib import nullcontext
 from trade_objects import Game
 import platform
-import os
 from terminal.colors import ColorScheme
 
 
 
 # *** Set modes here ***
 # Standard play is autopilot = False and interactive = True, which allows user input and interaction.
+
+
+def parse_bool(value):
+    if isinstance(value, bool):
+        return value
+
+    normalized = value.strip().lower()
+    if normalized in ("1", "true", "yes", "on"):
+        return True
+    if normalized in ("0", "false", "no", "off"):
+        return False
+
+    raise argparse.ArgumentTypeError("Expected a boolean value: true/false")
 
 
 def parse_args():
@@ -28,15 +40,67 @@ def parse_args():
         default=ColorScheme.DEFAULT.value,
         help="Select color scheme",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Run in non-interactive mode with autoplay defaults (useful for CI)",
+    )
+    parser.add_argument(
+        "--autopilot",
+        type=parse_bool,
+        nargs="?",
+        const=True,
+        metavar="{true,false}",
+        help="Enable or disable automatic move and stock selection",
+    )
+    parser.add_argument(
+        "--interactive",
+        type=parse_bool,
+        nargs="?",
+        const=True,
+        metavar="{true,false}",
+        help="Enable or disable interactive prompts",
+    )
+    parser.add_argument(
+        "--pause-at-end",
+        type=parse_bool,
+        nargs="?",
+        const=True,
+        metavar="{true,false}",
+        help="Enable or disable end-of-game pause prompt",
+    )
+    parser.set_defaults(autopilot=None, interactive=None, pause_at_end=None)
+    args = parser.parse_args()
+
+    if args.headless:
+        explicit_mode_flags = []
+        if args.autopilot is not None:
+            explicit_mode_flags.append("--autopilot")
+        if args.interactive is not None:
+            explicit_mode_flags.append("--interactive")
+        if args.pause_at_end is not None:
+            explicit_mode_flags.append("--pause-at-end")
+
+        if explicit_mode_flags:
+            parser.error(
+                "--headless cannot be combined with explicit mode flags: "
+                + ", ".join(explicit_mode_flags)
+            )
+
+    return args
 
 
 args = parse_args()
 
-headless = os.environ.get('TRADE_HEADLESS', '').lower() in ('1', 'true', 'yes')  # set TRADE_HEADLESS=1 for CI
-interactive = not headless
-autopilot = True   # Game selects moves and stock purchases when True; can ask for user input if not headless/interactive
-pause_at_end = not headless   # If True, will prompt user to hit enter at end of game
+headless = args.headless
+if headless:
+    interactive = False
+    autopilot = True
+    pause_at_end = False
+else:
+    interactive = True if args.interactive is None else args.interactive
+    autopilot = False if args.autopilot is None else args.autopilot
+    pause_at_end = True if args.pause_at_end is None else args.pause_at_end
 monochrome = args.monochrome
 requested_color_scheme = ColorScheme(args.color_scheme)
 color_scheme = ColorScheme.DEFAULT if monochrome else requested_color_scheme

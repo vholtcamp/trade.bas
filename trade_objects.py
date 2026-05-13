@@ -705,8 +705,7 @@ class Game():
 
             
             # Clear instructions before player setup
-            if not self.monochrome:
-                print(self.terminal.clear())
+            print(self.display._clear_screen())
 
             for i in range(1, number_of_players + 1):
                 print(f'Player {i}, what is your name? ', end = '')
@@ -1265,8 +1264,6 @@ class Display():
         return self.game.terminal.supports_color and not self.monochrome
 
     def _clear_screen(self):
-        if self.monochrome:
-            return ""
         return self.game.terminal.clear()
 
     def company_color(self, symbol):

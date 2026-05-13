@@ -27,9 +27,8 @@ jobs:
         run: python -m pytest -q
 
       - name: Smoke test (headless autopilot)
-        run: python trade_main.py
+        run: python trade_main.py --headless
         env:
-          TRADE_HEADLESS: "1"
           PYTHONUNBUFFERED: "1"
 
           
