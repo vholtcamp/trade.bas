@@ -6,17 +6,17 @@
 
 
 A modern Python re‑implementation of the classic 1970s/80s BASIC game
-originally distributed as `TRADE.BAS` on systems (such as the Kaypro II).
+originally distributed as `TRADE.BAS` with the Kaypro II (and other systems). 
 
 This project preserves the core mechanics and feel of the original while
 making it easy to run and play on modern systems.
 
 ## Game Name
 
-*Star Lanes* was the title used in the original 1977 *Interface Age* publication
-by Steven Faber. `TRADE.BAS` is the name most commonly used when loading the game from floppy disk.
+*Star Lanes* was the title used in the original [1977 *Interface Age* publication
+by Steven Faber](<BASIC_code_files/Star Lanes code original publication in Interface magazine.pdf>). 
 
-*[Star Traders](https://en.wikipedia.org/wiki/Star_Trader)* is an alternate name applied to the game at times, though the original *Star Traders* was a more-RPG style space-trading adventure, which spawned multiple variations and descendents. 
+*[Star Traders](https://en.wikipedia.org/wiki/Star_Trader)* is an alternate name applied to the game at times, though the original *Star Traders* was a more-RPG style space-trading adventure, which spawned multiple variations and descendents (see linked article). 
 
 ## Gameplay Summary
 
@@ -28,7 +28,7 @@ A tile-placement stock purchasing game for 1 - 4 players. Players place tiles on
 - Dividends - fixed at 5% of the stock's share value - are paid before purchases each turn.
 - Stock splits occur when share price crosses the split threshold (original set at $3000).
 - The number of turns depends on the number of players - solo play is 49 turns, two players will have 24 turns, three players will have 16, and four players will have 12.
-- The winner is the player with highest net worth at the end.
+- The winner is the player with highest net worth (stock value plus cash) at the end.
 
 
 ## A few updates from the original...
@@ -48,24 +48,46 @@ Requires **Python 3.11 or later**.
 - **Linux and macOS**: Use the `blessings` terminal backend (full color and formatting support via curses)
 - **Windows**: Use the Windows terminal backend with `colorama` for color support (ANSI emulation)
 
-Create and activate a virtual environment:
+### Linux and macOS
+
+1. Create and activate a virtual environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-
 ```
 
-2. Install dependencies.
+2. Install dependencies:
 
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-3. Run the game.
+3. Run the game:
 
 ```bash
 python3 trade_main.py
+```
+
+### Windows
+
+1. Create and activate a virtual environment:
+
+```cmd
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+2. Install dependencies:
+
+```cmd
+python -m pip install -r requirements.txt
+```
+
+3. Run the game:
+
+```cmd
+python trade_main.py
 ```
 
 ## Runtime Flags
@@ -77,7 +99,7 @@ python3 trade_main.py
   python3 trade_main.py --monochrome
   ```
 
-- `--color-scheme {default,green,amber,white}`: Select a color scheme. Retro terminal themes are available (`green`, `amber`, `white`).
+- `--color-scheme {default,green,amber,white}`: Select a foreground color. In keeping with the retro nature of the game, users can specify (`green`, `amber`, `white`).
   ```bash
   python3 trade_main.py --color-scheme amber
   ```
@@ -103,11 +125,17 @@ Interested in modifying the game? Here is the key info on the current testing su
 
 From repository root:
 
+**Linux and macOS:**
 ```bash
+python3 -m pytest -q
+```
+
+**Windows:**
+```cmd
 python -m pytest -q
 ```
 
-Pytest discovery is restricted by `pytest.ini` to the tests directory.
+Both commands run the same test suite. Pytest discovery is restricted by `pytest.ini` to the tests directory.
 
 **Platform-Specific Notes:**
 - On Windows, tests for the `blessings` terminal backend are automatically skipped (blessings requires curses, which is unavailable on Windows).
