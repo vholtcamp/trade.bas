@@ -70,6 +70,16 @@ This prevents legacy scripts outside `tests/` from being collected as tests.
 
 These helpers are intentionally thin orchestration wrappers that call production code directly; they do not duplicate or reimplement game logic.
 
+## Platform-Specific Test Behavior
+
+### Windows
+
+The `blessings` terminal library (which relies on `curses`) is not available on Windows. Tests for `BlessingsTerminal` are automatically skipped via `@pytest.mark.skipif(not BLESSINGS_AVAILABLE, ...)` decorators in `test_terminal_backends.py`.
+
+### Unix-like Systems (Linux, macOS)
+
+All terminal backend tests run. The `colorama` dependency specified for Windows is ignored.
+
 ## Coverage Map (Current)
 
 ### Company Creation
