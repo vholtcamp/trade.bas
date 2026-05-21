@@ -1,9 +1,12 @@
 
 import collections
 from collections import defaultdict, Counter, OrderedDict
+import os
+import select
 import sys
 import shutil
 import locale
+import time
 locale.setlocale(locale.LC_ALL, '')
 import json
 
@@ -59,6 +62,7 @@ STAR_BONUS = 500
 FOUNDERS_BONUS_SHARES = 5
 TWO_FOR_ONE_PRICE = 3000
 DIVIDEND_MULTIPLIER = 0.05
+COMPUTER_THINK_DELAY_SECONDS = 1.1
 
 # BASIC rule: merger cash bonus is 10x losing share price,
 # prorated by ownership and truncated to integer
@@ -783,9 +787,9 @@ class Game():
 
         if show_computer_details:
             legal = ", ".join(legal_moves)
-            self.last_action = f"{player.name} is choosing from: {legal}"
+            self.last_action = f"[COMPUTER TURN] {player.name} is thinking... options: {legal}"
             self.display.display_map(player)
-            self.display.any_to_continue()
+            self.display.timed_pause(COMPUTER_THINK_DELAY_SECONDS)
 
         move = player.choose_move(legal_moves, is_auto_turn)
         self.play_move(player, move)
@@ -797,13 +801,13 @@ class Game():
             if is_auto_turn:
                 purchase_clause = self._auto_buy_stocks(player, is_autopilot_turn=autopilot)
                 if show_computer_details:
-                    self.last_action = f"{player.name} played {move} and {purchase_clause}"
+                    self.last_action = f"[COMPUTER TURN] {player.name} played {move} and {purchase_clause}"
                     self.display.display_map(player)
                     self.display.any_to_continue()
             else:
                 player.buy_stocks()
         elif show_computer_details:
-            self.last_action = f"{player.name} played {move}."
+            self.last_action = f"[COMPUTER TURN] {player.name} played {move}."
             self.display.display_map(player)
             self.display.any_to_continue()
 
@@ -1415,6 +1419,51 @@ class Display():
         if self.game.headless:
             return
         input('Press enter key to continue.')
+
+    def timed_pause(self, seconds):
+        if self.game.headless or not self.game.interactive:
+            return
+        duration = max(0.0, seconds)
+        if duration == 0.0:
+            return
+
+        if not sys.stdin.isatty():
+            time.sleep(duration)
+            return
+
+        fd = sys.stdin.fileno()
+        try:
+            import termios
+        except Exception:
+            time.sleep(duration)
+            return
+
+        try:
+            old_settings = termios.tcgetattr(fd)
+            new_settings = termios.tcgetattr(fd)
+            new_settings[3] &= ~(termios.ECHO | termios.ICANON)
+            termios.tcsetattr(fd, termios.TCSANOW, new_settings)
+
+            deadline = time.monotonic() + duration
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                wait_for = min(0.05, remaining)
+                ready, _, _ = select.select([sys.stdin], [], [], wait_for)
+                if ready:
+                    try:
+                        os.read(fd, 1024)
+                    except OSError:
+                        break
+        except Exception:
+            time.sleep(duration)
+        finally:
+            try:
+                termios.tcsetattr(fd, termios.TCSANOW, old_settings)
+                termios.tcflush(fd, termios.TCIFLUSH)
+            except Exception:
+                pass
 
 
     def prompt_stock_purchase(self, company, player):

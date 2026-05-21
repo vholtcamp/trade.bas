@@ -209,19 +209,25 @@ def test_execute_turn_computer_player_shows_move_and_purchase_summary_with_pause
         shown_actions.append(game.last_action)
 
     pause_calls = []
+    timed_pause_calls = []
 
     def record_pause():
         pause_calls.append(True)
 
+    def record_timed_pause(seconds):
+        timed_pause_calls.append(seconds)
+
     monkeypatch.setattr(game.display, "display_map", record_map)
     monkeypatch.setattr(game.display, "any_to_continue", record_pause)
+    monkeypatch.setattr(game.display, "timed_pause", record_timed_pause)
 
     game.execute_turn(computer, autopilot=False)
 
-    assert any(action and "is choosing from" in action for action in shown_actions)
-    assert any(action and "played A1 and bought" in action for action in shown_actions)
-    assert game.last_action.startswith(f"{computer.name} played A1 and bought")
-    assert len(pause_calls) == 2
+    assert any(action and "[COMPUTER TURN]" in action and "is thinking" in action for action in shown_actions)
+    assert any(action and "[COMPUTER TURN]" in action and "played A1 and bought" in action for action in shown_actions)
+    assert game.last_action.startswith(f"[COMPUTER TURN] {computer.name} played A1 and bought")
+    assert len(timed_pause_calls) == 1
+    assert len(pause_calls) == 1
 
 
 @pytest.mark.interactive
