@@ -122,43 +122,118 @@ else:
 
 # Shall we play a game?
 
+def prompt_int_with_quit(prompt, min_val, max_val):
+    while True:
+        print(f"{prompt} ({min_val} - {max_val})? (Q to quit)")
+        print('> ', end='')
+        raw_input = input().strip()
+
+        if raw_input.upper() == 'Q':
+            sys.exit()
+
+        if raw_input.isdecimal():
+            value = int(raw_input)
+            if min_val <= value <= max_val:
+                return value
+            print(f'Please enter a number between {min_val} and {max_val}.')
+            continue
+
+        print('Please enter a number.')
+
+
+def prompt_ai_difficulty(label='computer'):
+    options = {
+        'B': 'beginner',
+        'I': 'intermediate',
+        'A': 'advanced',
+    }
+
+    while True:
+        print(f'Select {label} difficulty: [B]eginner, [I]ntermediate, [A]dvanced (Q to quit)')
+        print('> ', end='')
+        raw_input = input().strip().upper()
+
+        if raw_input == 'Q':
+            sys.exit()
+
+        if not raw_input:
+            return 'beginner'
+
+        if raw_input in options:
+            return options[raw_input]
+
+        print('Please enter B, I, A, or Q.')
+
+
+def get_startup_configuration():
+    if autopilot:
+        return 2, 0, 'beginner', ['beginner', 'beginner']
+
+    if not interactive:
+        return 2, 2, 'beginner', []
+
+    number_of_players = prompt_int_with_quit('How many total players (human + computer)', 1, MAX_PLAYERS)
+    human_players = prompt_int_with_quit('How many human players', 1, number_of_players)
+
+    computer_players = number_of_players - human_players
+    ai_difficulty = 'beginner'
+    ai_difficulties = []
+    if computer_players > 0:
+        for i in range(1, computer_players + 1):
+            difficulty = prompt_ai_difficulty(label=f'Computer {i}')
+            ai_difficulties.append(difficulty)
+        ai_difficulty = ai_difficulties[0]
+
+    return number_of_players, human_players, ai_difficulty, ai_difficulties
+
+
+def display_startup_summary(number_of_players, human_players, ai_difficulties):
+    computer_players = number_of_players - human_players
+    label_width = 15
+    rows = [
+        f"{'Total players:':<{label_width}} {number_of_players}",
+        f"{'Human players:':<{label_width}} {human_players}",
+        f"{'Computer seats:':<{label_width}} {computer_players}",
+    ]
+
+    if computer_players > 0:
+        for i, difficulty in enumerate(ai_difficulties, start=1):
+            rows.append(f"{'Computer ' + str(i) + ':':<{label_width}} {difficulty.title()}")
+
+    border = "=" * max(len(" Game Setup Summary "), max(len(row) for row in rows))
+
+    print()
+    print(border)
+    print("Game Setup Summary")
+    print(border)
+    for row in rows:
+        print(row)
+    print(border)
+    print()
+
+
 fullscreen_context = nullcontext() if monochrome else term.fullscreen()
 
 with fullscreen_context:
-    
-    if not autopilot:
+    number_of_players, human_players, ai_difficulty, ai_difficulties = get_startup_configuration()
 
-        while True:
-            print('How many players (1 - 4)? (Q to quit)')
-            print('> ', end = '')
-            raw_input = input()
-            
-            if raw_input.upper() == 'Q':
-                sys.exit()
-            
-            if raw_input.isdecimal():
-                if int(raw_input) <= 0 or int(raw_input) > MAX_PLAYERS:
-                    print(f'Please enter a number between 1 and {MAX_PLAYERS}.')
-                else:
-                    number_of_players = int(raw_input)
-                    break
-            else:
-                print('Please enter a number.')
-        
-    else:
-        number_of_players = 2
-        
+    if interactive and not autopilot:
+        display_startup_summary(number_of_players, human_players, ai_difficulties)
+
     max_turns = TOTAL_TURNS // number_of_players
-    game = Game(number_of_players, 
-                term, 
-                max_turns, 
-                interactive=interactive,  
+    game = Game(number_of_players,
+                term,
+                max_turns,
+                interactive=interactive,
                 autopilot=autopilot,
                 headless=headless,
                 pause_at_end=pause_at_end,
                 monochrome=monochrome,
                 color_scheme=color_scheme,
-                debug_econ=False
+                debug_econ=False,
+                human_players=human_players,
+                ai_difficulty=ai_difficulty,
+                ai_difficulties=ai_difficulties,
                 )
 
     while game.turn_number <= game.max_turns:

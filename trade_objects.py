@@ -20,6 +20,7 @@ from random import randint
 from enum import Enum, auto
 from typing import Dict, Set
 from terminal.colors import ColorScheme, get_company_color
+from ai_strategies import build_ai_strategy
 
 from dataclasses import dataclass
 
@@ -167,19 +168,21 @@ class Player():
     a defaultdict (int) so that 0 will always be returned.
     '''
 
-    def __init__(self, name, game):
+    def __init__(self, name, game, is_computer=False, ai_difficulty='beginner', ai_strategy=None):
         # TODO - Input values for names
         self.name = name
         self.cash_on_hand = STARTING_CASH
         self.portfolio = defaultdict(int)
         self.game = game
+        self.is_computer = is_computer
+        self.ai_difficulty = ai_difficulty
+        self.ai_strategy = ai_strategy
         self.old_data_for_display = 0
 
 
     def choose_move(self, legal_moves, autopilot=False):
-        if autopilot:
-            random.shuffle(legal_moves)
-            move = legal_moves[0]
+        if autopilot or self.is_computer:
+            move = self.game.choose_ai_move(self, legal_moves)
             if self.game.interactive:
                 print(f'Taking move: {move}')
             return move
@@ -613,7 +616,7 @@ class Company():
             }
 
         self.share_price //= 2
-        self.price_quantum //= 2
+        self.price_quantum = max(1, self.price_quantum // 2)
         for p in self.game.players:
             p.old_data_for_display = p.portfolio[self.symbol]
             p.portfolio[self.symbol] *= 2
@@ -680,7 +683,7 @@ class Company():
 
 class Game():
 
-    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, headless = False, pause_at_end=True, monochrome=False, color_scheme=ColorScheme.DEFAULT, debug_econ=False):
+    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, headless = False, pause_at_end=True, monochrome=False, color_scheme=ColorScheme.DEFAULT, debug_econ=False, human_players=None, ai_difficulty='beginner', ai_difficulties=None):
         self.turn_number = 1
         self.number_of_players = number_of_players
         self.display = Display(self, monochrome=monochrome, color_scheme=color_scheme)
@@ -696,80 +699,102 @@ class Game():
         self.color_scheme = color_scheme
         self.debug_econ = debug_econ
         self.pause_at_end = pause_at_end
-    
-        if not self.autopilot and self.interactive:
-            resp = input("View instructions? (Y/n): ").strip().upper()
-            if resp in ("", "Y"):
-                self.display.display_instructions()
-                self.display.any_to_continue()
+        self.ai_difficulty = ai_difficulty
+        self.ai_difficulties = list(ai_difficulties or [])
 
-            
-            # Clear instructions before player setup
-            print(self.display._clear_screen())
-
-            for i in range(1, number_of_players + 1):
-                print(f'Player {i}, what is your name? ', end = '')
-                p_name = input()
-                p = Player(p_name, self)
-                self.players.append(p)
+        if human_players is None:
+            self.human_players = 0 if self.autopilot else self.number_of_players
         else:
-            for i in range(number_of_players):
-                self.players.append(Player(f'Player {i+1}', self))
+            self.human_players = max(0, min(human_players, self.number_of_players))
+        self.computer_players = self.number_of_players - self.human_players
 
+        self._build_players()
 
         random.shuffle(self.players)
         self.map = Map()
         self.active_companies = collections.OrderedDict()
 
+    def _build_players(self):
+        if self.interactive and not self.autopilot:
+            resp = input("View instructions? (Y/n): ").strip().upper()
+            if resp in ("", "Y"):
+                self.display.display_instructions()
+                self.display.any_to_continue()
+
+            # Clear instructions before player setup
+            print(self.display._clear_screen())
+
+            self._build_interactive_players()
+            return
+
+        self._build_noninteractive_players()
+
+    def _build_interactive_players(self):
+        for i in range(1, self.human_players + 1):
+            print(f'Player {i}, what is your name? ', end='')
+            p_name = input()
+            self.players.append(Player(p_name, self, is_computer=False))
+
+        for i in range(1, self.computer_players + 1):
+            difficulty = self._ai_difficulty_for_computer(i)
+            self.players.append(
+                Player(
+                    f'Computer {i}',
+                    self,
+                    is_computer=True,
+                    ai_difficulty=difficulty,
+                    ai_strategy=build_ai_strategy(difficulty),
+                )
+            )
+
+    def _build_noninteractive_players(self):
+        computer_counter = 0
+        for i in range(1, self.number_of_players + 1):
+            is_computer = self.autopilot or i > self.human_players
+            label = 'Computer' if is_computer else 'Player'
+            if is_computer:
+                computer_counter += 1
+                difficulty = self._ai_difficulty_for_computer(computer_counter)
+                self.players.append(
+                    Player(
+                        f'{label} {computer_counter}',
+                        self,
+                        is_computer=True,
+                        ai_difficulty=difficulty,
+                        ai_strategy=build_ai_strategy(difficulty),
+                    )
+                )
+            else:
+                self.players.append(Player(f'{label} {i}', self, is_computer=False))
+
+    def _ai_difficulty_for_computer(self, computer_index):
+        list_index = computer_index - 1
+        if list_index < len(self.ai_difficulties):
+            return self.ai_difficulties[list_index]
+        return self.ai_difficulty
+
+    def choose_ai_move(self, player, legal_moves):
+        strategy = player.ai_strategy or build_ai_strategy(player.ai_difficulty)
+        return strategy.choose_move(self, player, legal_moves)
 
     def execute_turn(self, player, autopilot=False):
+        is_auto_turn = autopilot or player.is_computer
         legal_moves = self._get_legal_moves(self.map)
-        move = player.choose_move(legal_moves, autopilot)
+        move = player.choose_move(legal_moves, is_auto_turn)
         self.play_move(player, move)
 
         self.pay_dividends(player)
         self.display.display_map(player)
 
         if self.active_companies:
-
-            if self.autopilot:
+            if is_auto_turn:
                 self._auto_buy_stocks(player)
             else:
                 player.buy_stocks()
 
     def _auto_buy_stocks(self, player):
-        """
-        Simple autopilot stock strategy.
-
-        Buys approximately half of the maximum affordable shares
-        in each active company, to ensure broad participation in
-        the economy without attempting optimal play.
-
-
-        Autopilot is intentionally non-optimal.
-        The goal is to exercise economic rules,
-        not to play strategically.
-
-        """
-
-        for symbol in sorted(self.active_companies.keys()):
-            company = self.active_companies[symbol]
-
-            max_affordable = player.cash_on_hand // company.share_price
-            if max_affordable <= 0:
-                continue
-
-            shares_to_buy = min(max_affordable // 2, 20)
-            if shares_to_buy <= 0:
-                continue
-
-            # Apply purchase
-            player.portfolio[company.symbol] += shares_to_buy
-            player.cash_on_hand -= shares_to_buy * company.share_price
-
-            self.last_action = (
-                f"Autopilot purchased {shares_to_buy} shares of {company.name}"
-            )
+        strategy = player.ai_strategy or build_ai_strategy(player.ai_difficulty)
+        strategy.buy_stocks(self, player)
 
     def round(self):
         for player in self.players:

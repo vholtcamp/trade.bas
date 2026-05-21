@@ -204,3 +204,33 @@ def test_boolean_aliases_are_accepted_for_autopilot(token):
 
     assert result.returncode != 0
     assert "--headless cannot be combined with explicit mode flags: --autopilot" in result.stderr
+
+
+def test_interactive_startup_prompts_for_human_player_count_before_game_start():
+    result = subprocess.run(
+        [sys.executable, "trade_main.py"],
+        input="2\nQ\n",
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
+    )
+
+    assert result.returncode == 0
+    assert "How many total players (human + computer)" in result.stdout
+    assert "How many human players" in result.stdout
+
+
+def test_interactive_startup_prompts_each_computer_for_difficulty():
+    result = subprocess.run(
+        [sys.executable, "trade_main.py"],
+        input="3\n1\nB\nQ\n",
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
+    )
+
+    assert result.returncode == 0
+    assert "Select Computer 1 difficulty" in result.stdout
+    assert "Select Computer 2 difficulty" in result.stdout

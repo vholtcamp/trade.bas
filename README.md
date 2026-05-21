@@ -4,14 +4,14 @@
 ![TRADE.BAS gameplay screenshot](docs/trade_screenshot.png)
 
 
-
 A modern Python re‑implementation of the classic 1970s/80s BASIC game
 originally distributed as `TRADE.BAS` with the Kaypro II (and other systems). 
 
-This project preserves the core mechanics and feel of the original while
-making it easy to run and play on modern systems.
+The game plays like I recall the original, though there are a few modifications to the display and game commands that (I think) make it a bit smoother of an experience while still preserving the feel of the classic game.
 
-## Game Name
+When I started this some years ago, this was a chance to work on my coding skills and expand my use of Python. In picking it back up recently (2026) it became a chance to explore agent coding. Much of the code, while based on my original port from BASIC, has been revised, rewritten, or expanded, by coding agents. 
+
+## Game Name and History
 
 *Star Lanes* was the title used in the original [1977 *Interface Age* publication
 by Steven Faber](<BASIC_code_files/Star Lanes code original publication in Interface magazine.pdf>). 
@@ -33,9 +33,9 @@ A tile-placement stock purchasing game for 1 - 4 players. Players place tiles on
 
 ## A few updates from the original...
 
-- *Mergers*: In the original, if two companies were merging and they were tied in terms of outposts, the company alphebetically first would win. I have tweaked this so that the oldest company comes out on top.
+- *Mergers*: In the original, if two companies were merging and they were tied in terms of outposts, the company alphebetically first would win. I tweaked this so that the oldest company survives.
 
-- *Colors:* While the original incarnations of the game would all have been in monochrome, this version does use a colorized mode as default, where company symbols and names are rendered in color. (See below in command line args for how to tweak color modes to match your preferred retro nostalgia scheme.)
+- *Colors:* While the original incarnations of the game would all have been in monochrome, this version does use a colorized mode as default, where company symbols and names are rendered in color. (See below in command line args for how to tweak color modes to match your preferred retro nostalgia scheme, should you so desire.)
 
 - *Display:* The original version printed only the map each turn, with a special command to display a player's portfolio. This version adds an updated portfolio to the right of the map, so there is no "Display Portfolio" or "Display Map" command. Similarly, the stock purchasing display is tweaked to confirm the previous purchase (or lack thereof) for player reference. 
 

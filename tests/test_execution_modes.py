@@ -5,6 +5,7 @@ import pytest
 
 import trade_objects
 from trade_objects import Game, STARTING_CASH
+from ai_strategies import AdvancedAIStrategy
 
 
 @pytest.mark.parametrize("autopilot", [False, True])
@@ -30,7 +31,8 @@ def test_constructor_skips_input_and_instructions_when_noninteractive(monkeypatc
 
     assert game.interactive is False
     assert game.autopilot is autopilot
-    assert sorted(player.name for player in game.players) == ["Player 1", "Player 2"]
+    expected_names = ["Computer 1", "Computer 2"] if autopilot else ["Player 1", "Player 2"]
+    assert sorted(player.name for player in game.players) == expected_names
     assert calls == []
 
 
@@ -104,6 +106,54 @@ def test_execute_turn_manual_mode_prompts_for_stock_purchase(game_factory, monke
     assert prompts == [(company.symbol, player.name)]
     assert player.portfolio[company.symbol] == 0
     assert player.cash_on_hand == STARTING_CASH
+
+
+def test_execute_turn_computer_player_skips_stock_prompt(game_factory, monkeypatch):
+    game = game_factory(interactive=False, autopilot=False, number_of_players=2)
+    game.human_players = 1
+    game.computer_players = 1
+    game.players[0].is_computer = False
+    game.players[1].is_computer = True
+
+    computer = game.players[1]
+    company = SimpleNamespace(symbol="T", name="Test Company", share_price=100)
+    game.active_companies = OrderedDict([(company.symbol, company)])
+
+    monkeypatch.setattr(game, "_get_legal_moves", lambda _map: ["A1"])
+    monkeypatch.setattr(computer, "choose_move", lambda legal_moves, autopilot: legal_moves[0])
+    monkeypatch.setattr(game, "play_move", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game, "pay_dividends", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game.display, "display_map", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        game.display,
+        "prompt_stock_purchase",
+        lambda *_args, **_kwargs: pytest.fail("computer turn should not prompt for stock purchases"),
+    )
+
+    starting_cash = computer.cash_on_hand
+    game.execute_turn(computer, autopilot=False)
+
+    assert computer.portfolio[company.symbol] > 0
+    assert computer.cash_on_hand < starting_cash
+
+
+def test_per_computer_difficulties_are_assigned_in_order(game_factory):
+    game = game_factory(interactive=False, autopilot=False, number_of_players=3)
+    game = Game(
+        number_of_players=3,
+        terminal=game.terminal,
+        max_turns=5,
+        interactive=False,
+        autopilot=False,
+        human_players=1,
+        ai_difficulty="beginner",
+        ai_difficulties=["intermediate", "advanced"],
+    )
+
+    computers = [p for p in game.players if p.is_computer]
+    assert len(computers) == 2
+    assert sorted(p.ai_difficulty for p in computers) == ["advanced", "intermediate"]
+    assert any(isinstance(p.ai_strategy, AdvancedAIStrategy) for p in computers)
 
 
 def test_execute_turn_autopilot_can_render_real_map_output(game_factory, monkeypatch, capsys):

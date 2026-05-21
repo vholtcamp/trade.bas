@@ -73,3 +73,20 @@ def test_price_quantum_changes_only_on_split(game):
     play(game, player, "C2")
 
     assert company.price_quantum == old_quantum
+
+
+def test_repeated_splits_never_reduce_price_quantum_below_one(game):
+    """Regression: repeated split events must keep a positive non-zero quantum."""
+    player = game.players[0]
+    company = found_company(game, player, "B2")
+
+    # Simulate deep split history where quantum approaches the floor.
+    company.price_quantum = 1
+    company.share_price = TWO_FOR_ONE_PRICE
+    old_holdings = player.portfolio[company.symbol]
+
+    company.split_stock()
+
+    assert company.price_quantum == 1
+    assert company.share_price == TWO_FOR_ONE_PRICE // 2
+    assert player.portfolio[company.symbol] == old_holdings * 2
