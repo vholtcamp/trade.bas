@@ -219,9 +219,9 @@ def test_execute_turn_computer_player_shows_move_and_purchase_summary_with_pause
     game.execute_turn(computer, autopilot=False)
 
     assert any(action and "is choosing from" in action for action in shown_actions)
-    assert any(action and "played A1" in action for action in shown_actions)
-    assert game.last_action.startswith(f"{computer.name} bought")
-    assert len(pause_calls) == 3
+    assert any(action and "played A1 and bought" in action for action in shown_actions)
+    assert game.last_action.startswith(f"{computer.name} played A1 and bought")
+    assert len(pause_calls) == 2
 
 
 @pytest.mark.interactive

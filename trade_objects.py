@@ -790,22 +790,22 @@ class Game():
         move = player.choose_move(legal_moves, is_auto_turn)
         self.play_move(player, move)
 
-        if show_computer_details:
-            self.last_action = f"{player.name} played {move}."
-            self.display.display_map(player)
-            self.display.any_to_continue()
-
         self.pay_dividends(player)
         self.display.display_map(player)
 
         if self.active_companies:
             if is_auto_turn:
-                self._auto_buy_stocks(player, is_autopilot_turn=autopilot)
+                purchase_clause = self._auto_buy_stocks(player, is_autopilot_turn=autopilot)
                 if show_computer_details:
+                    self.last_action = f"{player.name} played {move} and {purchase_clause}"
                     self.display.display_map(player)
                     self.display.any_to_continue()
             else:
                 player.buy_stocks()
+        elif show_computer_details:
+            self.last_action = f"{player.name} played {move}."
+            self.display.display_map(player)
+            self.display.any_to_continue()
 
     def _auto_buy_stocks(self, player, is_autopilot_turn=False):
         before_cash = player.cash_on_hand
@@ -815,14 +815,16 @@ class Game():
         }
         strategy = player.ai_strategy or build_ai_strategy(player.ai_difficulty)
         strategy.buy_stocks(self, player)
-        self.last_action = self._summarize_auto_purchases(
+        purchase_clause = self._summarize_auto_purchases(
             player,
             before_portfolio,
             before_cash,
-            is_autopilot_turn=is_autopilot_turn,
         )
+        label = "Autopilot" if is_autopilot_turn else player.name
+        self.last_action = f"{label} {purchase_clause}"
+        return purchase_clause
 
-    def _summarize_auto_purchases(self, player, before_portfolio, before_cash, is_autopilot_turn=False):
+    def _summarize_auto_purchases(self, player, before_portfolio, before_cash):
         purchases = []
         for symbol in sorted(self.active_companies.keys()):
             before = before_portfolio.get(symbol, 0)
@@ -833,12 +835,11 @@ class Game():
                 unit = "share" if bought == 1 else "shares"
                 purchases.append(f"{bought} {unit} of {company_name}")
 
-        label = "Autopilot" if is_autopilot_turn else player.name
         if not purchases:
-            return f"{label} skipped stock purchases"
+            return "skipped stock purchases"
 
         spent = int(before_cash - player.cash_on_hand)
-        return f"{label} bought {'; '.join(purchases)} (spent ${spent:,})"
+        return f"bought {'; '.join(purchases)} (spent ${spent:,})"
 
     def _should_show_computer_turn_details(self, player):
         return (
