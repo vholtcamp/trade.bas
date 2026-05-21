@@ -183,8 +183,6 @@ class Player():
     def choose_move(self, legal_moves, autopilot=False):
         if autopilot or self.is_computer:
             move = self.game.choose_ai_move(self, legal_moves)
-            if self.game.interactive:
-                print(f'Taking move: {move}')
             return move
         
         while True:
@@ -701,6 +699,7 @@ class Game():
         self.pause_at_end = pause_at_end
         self.ai_difficulty = ai_difficulty
         self.ai_difficulties = list(ai_difficulties or [])
+        self._first_player_announced = False
 
         if human_players is None:
             self.human_players = 0 if self.autopilot else self.number_of_players
@@ -779,24 +778,102 @@ class Game():
 
     def execute_turn(self, player, autopilot=False):
         is_auto_turn = autopilot or player.is_computer
+        show_computer_details = self._should_show_computer_turn_details(player)
         legal_moves = self._get_legal_moves(self.map)
+
+        if show_computer_details:
+            legal = ", ".join(legal_moves)
+            self.last_action = f"{player.name} is choosing from: {legal}"
+            self.display.display_map(player)
+            self.display.any_to_continue()
+
         move = player.choose_move(legal_moves, is_auto_turn)
         self.play_move(player, move)
+
+        if show_computer_details:
+            self.last_action = f"{player.name} played {move}."
+            self.display.display_map(player)
+            self.display.any_to_continue()
 
         self.pay_dividends(player)
         self.display.display_map(player)
 
         if self.active_companies:
             if is_auto_turn:
-                self._auto_buy_stocks(player)
+                self._auto_buy_stocks(player, is_autopilot_turn=autopilot)
+                if show_computer_details:
+                    self.display.display_map(player)
+                    self.display.any_to_continue()
             else:
                 player.buy_stocks()
 
-    def _auto_buy_stocks(self, player):
+    def _auto_buy_stocks(self, player, is_autopilot_turn=False):
+        before_cash = player.cash_on_hand
+        before_portfolio = {
+            symbol: player.portfolio.get(symbol, 0)
+            for symbol in self.active_companies.keys()
+        }
         strategy = player.ai_strategy or build_ai_strategy(player.ai_difficulty)
         strategy.buy_stocks(self, player)
+        self.last_action = self._summarize_auto_purchases(
+            player,
+            before_portfolio,
+            before_cash,
+            is_autopilot_turn=is_autopilot_turn,
+        )
+
+    def _summarize_auto_purchases(self, player, before_portfolio, before_cash, is_autopilot_turn=False):
+        purchases = []
+        for symbol in sorted(self.active_companies.keys()):
+            before = before_portfolio.get(symbol, 0)
+            after = player.portfolio.get(symbol, 0)
+            bought = after - before
+            if bought > 0:
+                company_name = self.active_companies[symbol].name
+                unit = "share" if bought == 1 else "shares"
+                purchases.append(f"{bought} {unit} of {company_name}")
+
+        label = "Autopilot" if is_autopilot_turn else player.name
+        if not purchases:
+            return f"{label} skipped stock purchases"
+
+        spent = int(before_cash - player.cash_on_hand)
+        return f"{label} bought {'; '.join(purchases)} (spent ${spent:,})"
+
+    def _should_show_computer_turn_details(self, player):
+        return (
+            player.is_computer
+            and self.interactive
+            and not self.headless
+            and self.human_players > 0
+        )
+
+    def _should_announce_first_player(self):
+        return (
+            self.interactive
+            and not self.headless
+            and self.human_players > 0
+            and self.computer_players > 0
+        )
+
+    def _announce_first_player(self):
+        first_player = self.players[0]
+        self.display.display_announcement([
+            'I will now decide who goes first.',
+            BlankLine(),
+            f'{first_player.name} goes first.',
+        ])
+        self.display.any_to_continue()
 
     def round(self):
+        if (
+            self.turn_number == 1
+            and not self._first_player_announced
+            and self._should_announce_first_player()
+        ):
+            self._announce_first_player()
+            self._first_player_announced = True
+
         for player in self.players:
             self.active_player = player
             # last_action is scoped to the active player only

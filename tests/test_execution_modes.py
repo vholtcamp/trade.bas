@@ -78,7 +78,7 @@ def test_execute_turn_autopilot_skips_stock_purchase_prompt(game, monkeypatch):
 
     assert player.portfolio[company.symbol] > 0
     assert player.cash_on_hand < starting_cash
-    assert game.last_action.startswith("Autopilot purchased")
+    assert game.last_action.startswith("Autopilot bought")
 
 
 def test_execute_turn_manual_mode_prompts_for_stock_purchase(game_factory, monkeypatch):
@@ -180,7 +180,48 @@ def test_execute_turn_autopilot_can_render_real_map_output(game_factory, monkeyp
     out = capsys.readouterr().out
     assert "Turn " in out
     assert "Portfolio" in out
-    assert game.last_action.startswith("Autopilot purchased")
+    assert game.last_action.startswith("Autopilot bought")
+
+
+def test_execute_turn_computer_player_shows_move_and_purchase_summary_with_pauses(game_factory, monkeypatch):
+    game = game_factory(interactive=False, autopilot=False, number_of_players=2)
+    game.interactive = True
+    game.headless = False
+    game.human_players = 1
+    game.computer_players = 1
+    game.players[0].is_computer = False
+    game.players[1].is_computer = True
+
+    computer = game.players[1]
+    game.active_player = computer
+
+    company = SimpleNamespace(symbol="T", name="Test Company", share_price=100)
+    game.active_companies = OrderedDict([(company.symbol, company)])
+
+    monkeypatch.setattr(game, "_get_legal_moves", lambda _map: ["A1", "B2", "C3", "D4", "E5"])
+    monkeypatch.setattr(computer, "choose_move", lambda legal_moves, autopilot: "A1")
+    monkeypatch.setattr(game, "play_move", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game, "pay_dividends", lambda *_args, **_kwargs: None)
+
+    shown_actions = []
+
+    def record_map(_player):
+        shown_actions.append(game.last_action)
+
+    pause_calls = []
+
+    def record_pause():
+        pause_calls.append(True)
+
+    monkeypatch.setattr(game.display, "display_map", record_map)
+    monkeypatch.setattr(game.display, "any_to_continue", record_pause)
+
+    game.execute_turn(computer, autopilot=False)
+
+    assert any(action and "is choosing from" in action for action in shown_actions)
+    assert any(action and "played A1" in action for action in shown_actions)
+    assert game.last_action.startswith(f"{computer.name} bought")
+    assert len(pause_calls) == 3
 
 
 @pytest.mark.interactive
