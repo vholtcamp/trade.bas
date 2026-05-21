@@ -1,4 +1,3 @@
-
 # TRADE.BAS
 
 ![TRADE.BAS gameplay screenshot](docs/trade_screenshot.png)
@@ -7,7 +6,7 @@
 A modern Python re‑implementation of the classic 1970s/80s BASIC game
 originally distributed as `TRADE.BAS` with the Kaypro II (and other systems). 
 
-The game plays like I recall the original, though there are a few modifications to the display and game commands that (I think) make it a bit smoother of an experience while still preserving the feel of the classic game.
+The game plays like I recall the original, though there are a few modifications to the display and game commands that (I think) make it a bit smoother of an experience while still preserving the feel of the classic game. I also added an option for computer-controlled players that was not in the original BASIC game.
 
 When I started this some years ago, this was a chance to work on my coding skills and expand my use of Python. In picking it back up recently (2026) it became a chance to explore agent coding. Much of the code, while based on my original port from BASIC, has been revised, rewritten, or expanded, by coding agents. 
 
@@ -20,7 +19,7 @@ by Steven Faber](<BASIC_code_files/Star Lanes code original publication in Inter
 
 ## Gameplay Summary
 
-A tile-placement stock purchasing game for 1 - 4 players. Players place tiles on a grid to found companies, expand their territories, trigger mergers, and accumulate the highest net worth by game end.
+A tile-placement stock purchasing game for 1 - 4 players. Players can compete against each other or the computer, and the computer-controlled players can be set to Beginnger, Intermediate, or Advanced skill levels. Players place tiles on a grid to found companies, expand their territories, trigger mergers, and accumulate the highest net worth by game end.
 
 - The map is a 9x12 grid (A-L columns, 1-9 rows).
 - Each turn offers 5 legal moves, chosen at random by the computer.
@@ -30,6 +29,11 @@ A tile-placement stock purchasing game for 1 - 4 players. Players place tiles on
 - The number of turns depends on the number of players - solo play is 49 turns, two players will have 24 turns, three players will have 16, and four players will have 12.
 - The winner is the player with highest net worth (stock value plus cash) at the end.
 
+## Strategy
+
+Winning this game is all about making smart choices with your money and planning ahead. Dividends, which are 5% of a stock's value, give you extra cash every turn. To make the most of this, invest in companies that are likely to grow quickly. Bigger dividends come from higher stock prices, so buying shares early can really pay off. However, don’t spend all your money—keep some cash ready for new opportunities.
+
+Mergers are another big way to boost your wealth. When two companies merge, the shareholders of the smaller company get a bonus based on how many shares they own. This means it’s smart to invest in companies that might get bought out, especially if you can help make the merger happen by placing tiles. Stock splits are also important. When a company’s stock price gets too high (like over $3000), the price is cut in half, but you get twice as many shares. This makes the stock easier to buy and can attract more players. By using dividends for steady income, mergers for big bonuses, and stock splits for long-term growth, you can build a strong portfolio and win the game.
 
 ## A few updates from the original...
 
@@ -38,6 +42,8 @@ A tile-placement stock purchasing game for 1 - 4 players. Players place tiles on
 - *Colors:* While the original incarnations of the game would all have been in monochrome, this version does use a colorized mode as default, where company symbols and names are rendered in color. (See below in command line args for how to tweak color modes to match your preferred retro nostalgia scheme, should you so desire.)
 
 - *Display:* The original version printed only the map each turn, with a special command to display a player's portfolio. This version adds an updated portfolio to the right of the map, so there is no "Display Portfolio" or "Display Map" command. Similarly, the stock purchasing display is tweaked to confirm the previous purchase (or lack thereof) for player reference. 
+
+- *Computer players:* This version features the option to have one or more opponents be controlled by the computer at three levels of skill. 
 
 
 ## Quick Start
@@ -159,5 +165,7 @@ Both commands run the same test suite. Pytest discovery is restricted by `pytest
 This project is licensed under the MIT License. See the LICENSE file for details.
 
 The original BASIC source code and accompanying publication are included for historical reference. Their original copyright status is preserved.
+
+
 
 
