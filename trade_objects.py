@@ -1,8 +1,6 @@
 
 import collections
 from collections import defaultdict, Counter, OrderedDict
-import os
-import select
 import sys
 import shutil
 import locale
@@ -1423,47 +1421,7 @@ class Display():
     def timed_pause(self, seconds):
         if self.game.headless or not self.game.interactive:
             return
-        duration = max(0.0, seconds)
-        if duration == 0.0:
-            return
-
-        if not sys.stdin.isatty():
-            time.sleep(duration)
-            return
-
-        fd = sys.stdin.fileno()
-        try:
-            import termios
-        except Exception:
-            time.sleep(duration)
-            return
-
-        try:
-            old_settings = termios.tcgetattr(fd)
-            new_settings = termios.tcgetattr(fd)
-            new_settings[3] &= ~(termios.ECHO | termios.ICANON)
-            termios.tcsetattr(fd, termios.TCSANOW, new_settings)
-
-            deadline = time.monotonic() + duration
-            while True:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    break
-                wait_for = min(0.05, remaining)
-                ready, _, _ = select.select([sys.stdin], [], [], wait_for)
-                if ready:
-                    try:
-                        os.read(fd, 1024)
-                    except OSError:
-                        break
-        except Exception:
-            time.sleep(duration)
-        finally:
-            try:
-                termios.tcsetattr(fd, termios.TCSANOW, old_settings)
-                termios.tcflush(fd, termios.TCIFLUSH)
-            except Exception:
-                pass
+        time.sleep(max(0.0, seconds))
 
 
     def prompt_stock_purchase(self, company, player):
