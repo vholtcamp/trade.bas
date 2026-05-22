@@ -1,6 +1,7 @@
 # TRADE.BAS
 
 ![TRADE.BAS gameplay screenshot](docs/trade_screenshot.png)
+![TRADE.BAS color gameplay screenshot](docs/trade_screenshot_color.png)
 
 
 A modern Python re‑implementation of the classic 1970s/80s BASIC game
