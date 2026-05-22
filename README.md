@@ -30,12 +30,6 @@ A tile-placement stock purchasing game for 1 - 4 players. Players can compete ag
 - The number of turns depends on the number of players - solo play is 49 turns, two players will have 24 turns, three players will have 16, and four players will have 12.
 - The winner is the player with highest net worth (stock value plus cash) at the end.
 
-## Strategy
-
-Winning this game is all about making smart choices with your money and planning ahead. Dividends, which are 5% of a stock's value, give you extra cash every turn. To make the most of this, invest in companies that are likely to grow quickly. Bigger dividends come from higher stock prices, so buying shares early can really pay off. However, don’t spend all your money—keep some cash ready for new opportunities.
-
-Mergers are another big way to boost your wealth. When two companies merge, the shareholders of the smaller company get a bonus based on how many shares they own. This means it’s smart to invest in companies that might get bought out, especially if you can help make the merger happen by placing tiles. Stock splits are also important. When a company’s stock price gets too high (over $3000), the price is cut in half, but you get twice as many shares. This makes the stock easier to buy and can attract more players. By using dividends for steady income, mergers for big bonuses, and stock splits for long-term growth, you can build a strong portfolio and win the game.
-
 ## A few updates from the original...
 
 - *Mergers*: In the original, if two companies were merging and they were tied in terms of outposts, the company alphebetically first would win. I tweaked this so that the oldest company survives.
@@ -44,7 +38,15 @@ Mergers are another big way to boost your wealth. When two companies merge, the 
 
 - *Display:* The original version printed only the map each turn, with a special command to display a player's portfolio. This version adds an updated portfolio to the right of the map, so there is no "Display Portfolio" or "Display Map" command. Similarly, the stock purchasing display is tweaked to confirm the previous purchase (or lack thereof) for player reference. 
 
-- *Computer players:* This version features the option to have one or more opponents be controlled by the computer at three levels of skill. 
+- *Computer players:* This version features the option to have one or more opponents be controlled by the computer at three levels of skill. Number and ability of computer players is set by the user during game startup.
+
+## Strategy
+
+Winning this game is all about making smart choices with your money and planning ahead. Dividends, which are 5% of a stock's value, give you extra cash every turn. To make the most of this, invest in companies that are likely to grow quickly. Bigger dividends come from higher stock prices, so buying shares early can really pay off. However, don’t spend all your money—keep some cash ready for new opportunities.
+
+Mergers are another big way to boost your wealth. When two companies merge, the shareholders of the smaller company get a bonus based on how many shares they own. This means it’s smart to invest in companies that might get bought out, especially if you can help make the merger happen by placing tiles. Stock splits are also important. When a company’s stock price gets too high (over $3000), the price is cut in half, but you get twice as many shares. This makes the stock easier to buy and can attract more players. By using dividends for steady income, mergers for big bonuses, and stock splits for long-term growth, you can build a strong portfolio and win the game.
+
+See stragegy.md (docs/strategy.md) for a fuller description of how the computer makes decisions, and how this might impact your strategy as a player.
 
 
 ## Quick Start
