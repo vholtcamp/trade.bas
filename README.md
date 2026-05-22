@@ -9,7 +9,7 @@ originally distributed as `TRADE.BAS` with the Kaypro II (and other systems).
 
 The game plays like I recall the original, though there are a few modifications to the display and game commands that (I think) make it a bit smoother of an experience while still preserving the feel of the classic game. I also added an option for computer-controlled players that was not in the original BASIC game.
 
-When I started this some years ago, this was a chance to work on my coding skills and expand my use of Python. In picking it back up recently (2026) it became a chance to explore agent coding. Much of the code, while based on my original port from BASIC, has been revised, rewritten, or expanded, by coding agents. 
+When I started this some years ago, this was a chance to work on my coding skills and expand my use of Python. In picking it back up recently (2026) it became a chance to explore agent coding. Much of the code, while based on my original port from BASIC, has been revised, rewritten, or expanded by coding agents. 
 
 ## Game Name and History
 
@@ -20,7 +20,7 @@ by Steven Faber](<BASIC_code_files/Star Lanes code original publication in Inter
 
 ## Gameplay Summary
 
-A tile-placement stock purchasing game for 1 - 4 players. Players can compete against each other or the computer, and the computer-controlled players can be set to Beginnger, Intermediate, or Advanced skill levels. Players place tiles on a grid to found companies, expand their territories, trigger mergers, and accumulate the highest net worth by game end.
+A tile-placement stock purchasing game for 1 - 4 players. Players can compete against each other or the computer, and the computer-controlled players can be set to Beginner, Intermediate, or Advanced skill levels. Players place tiles on a grid to found companies, expand their territories, trigger mergers, and accumulate the highest net worth by game end.
 
 - The map is a 9x12 grid (A-L columns, 1-9 rows).
 - Each turn offers 5 legal moves, chosen at random by the computer.
@@ -32,7 +32,7 @@ A tile-placement stock purchasing game for 1 - 4 players. Players can compete ag
 
 ## A few updates from the original...
 
-- *Mergers*: In the original, if two companies were merging and they were tied in terms of outposts, the company alphebetically first would win. I tweaked this so that the oldest company survives.
+- *Mergers*: In the original, if two companies were merging and they were tied in terms of outposts, the company alphabetically first would win. I tweaked this so that the oldest company survives.
 
 - *Colors:* While the original incarnations of the game would all have been in monochrome, this version does use a colorized mode as default, where company symbols and names are rendered in color. (See below in command line args for how to tweak color modes to match your preferred retro nostalgia scheme, should you so desire.)
 
@@ -46,7 +46,7 @@ Winning this game is all about making smart choices with your money and planning
 
 Mergers are another big way to boost your wealth. When two companies merge, the shareholders of the smaller company get a bonus based on how many shares they own. This means it’s smart to invest in companies that might get bought out, especially if you can help make the merger happen by placing tiles. Stock splits are also important. When a company’s stock price gets too high (over $3000), the price is cut in half, but you get twice as many shares. This makes the stock easier to buy and can attract more players. By using dividends for steady income, mergers for big bonuses, and stock splits for long-term growth, you can build a strong portfolio and win the game.
 
-See [stragegy.md](docs/strategy.md) for a fuller description of how the computer makes decisions, and how this might impact your strategy as a player.
+See [strategy.md](docs/strategy.md) for a fuller description of how the computer makes decisions, and how this might impact your strategy as a player.
 
 
 ## Quick Start
@@ -113,20 +113,20 @@ python trade_main.py
   python3 trade_main.py --color-scheme amber
   ```
 
+For regular gameplay you can safely ignore these subsequent flags, as they are used almost exclusively for development.
+
 - `--headless`: Run in non-interactive autoplay mode suitable for CI/smoke runs.
   ```bash
   python3 trade_main.py --headless
   ```
   Headless is authoritative: it enforces `autopilot=true`, `interactive=false`, and `pause-at-end=false`.
-  Do not combine `--headless` with explicit mode flags.
+  Do not combine `--headless` with explicit mode flags (below).
 
-- `--autopilot {true,false}`: Enable or disable automatic move and stock selection.
+- `--autopilot {true,false}`: Enable or disable automatic move and stock selection. When set to true startup prompts are skipped and the game currently launches as a 2-seat computer-only game at Beginner difficulty.
 
 - `--interactive {true,false}`: Enable or disable interactive prompts.
 
-- `--pause-at-end {true,false}`: Control whether the game waits for input before exiting.
-
-Default launch behavior is standard manual play: interactive prompts enabled, autopilot off, and pause-at-end on.
+- `--pause-at-end {true,false}`: Control whether the game waits for input before exiting. This allows an autopilot game to run to completion, and allow you to scroll back in your terminal to review the changing game state (useful for checking display or other game behaviors).
 
 ## Running Tests
 
@@ -155,13 +155,11 @@ Both commands run the same test suite. Pytest discovery is restricted by `pytest
 
 - `trade_main.py`: terminal entry point and top-level loop.
 - `trade_objects.py`: core domain model (Game, Company, Player, Map, Display).
+- `ai_strategies.py`: computer move-selection and stock-purchase strategy implementations.
 - `terminal/`: platform-specific terminal backends (Windows and Blessings for Unix-like systems).
-- `tests/`: rule-focused pytest suite. See [tests/README.md](tests/README.md).
+- `tests/`: rule and terminal behavior tests. See [tests/tests.md](tests/tests.md).
 - `docs/`: behavioral contracts and invariants. See [docs/README.md](docs/README.md).
 - `BASIC_code_files/`: original BASIC source, preserved as reference. See [BASIC_code_files/README.md](BASIC_code_files/README.md).
-- `diagnostics/`: economic event logging and debugging tools. See [diagnostics/README.md](diagnostics/README.md).
-
-
 
 ## License
 

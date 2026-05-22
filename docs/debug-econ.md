@@ -1,13 +1,14 @@
-# diagnostics/
+# docs/
 
 This directory is for diagnostic tooling and recipes used during development and economic debugging.
 
 ## Economic Event Logging
 
-The engine has opt-in economic event logging controlled by a single flag in `trade_objects.py`:
+The engine has opt-in economic event logging controlled at game startup via the `debug_econ` argument passed to `Game(...)` in `trade_main.py`.
+
+The log destination constant lives in `trade_objects.py`:
 
 ```python
-DEBUG_ECON = False       # set to True to enable
 ECON_LOG_FILE = 'econ_events.log'
 ```
 
@@ -15,7 +16,9 @@ When enabled, one structured JSON line is written per economic event to `ECON_LO
 
 ### Enabling Logging
 
-Set `DEBUG_ECON = True` in `trade_objects.py`, then run the game or any harness normally. Log output will appear in `econ_events.log` at the repository root.
+Set `debug_econ=True` in the `Game(...)` call in `trade_main.py`, then run the game or any harness normally. Log output will appear in `econ_events.log` at the repository root.
+
+Default behavior in the current entrypoint keeps this disabled (`debug_econ=False`).
 
 ### Logged Events
 
@@ -55,10 +58,10 @@ Each line is a JSON object with:
 
 ### Running a Full Diagnostic Game
 
-A non-interactive full-game harness can be used to produce a complete economic log without requiring terminal input. See the inline comments in `trade_objects.py` near `DEBUG_ECON` for details.
+A non-interactive full-game harness can be used to produce a complete economic log without requiring terminal input. You can combine `debug_econ=True` with non-interactive execution modes for CI or local diagnostics.
 
 ## Notes
 
 - Logging is diagnostic only and does not affect game logic or outcomes.
 - Log files should not be committed to the repository.
-- Disable `DEBUG_ECON` before sharing or distributing the code.
+- Disable `debug_econ` in startup configuration before sharing or distributing the code.

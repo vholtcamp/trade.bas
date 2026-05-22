@@ -11,7 +11,7 @@ The test suite reflects behaviors observed in the original GW‑BASIC TRADE.BAS 
 - Protect historically faithful gameplay rules.
 - Assert behavior and invariants, not implementation details.
 - Keep tests deterministic and fast.
-- Avoid terminal output, blessings display logic, and input-driven flows.
+- Mostly avoid terminal output, blessings display logic, and input-driven flows (except targeted execution-mode and interactive coverage).
 
 ## Test Design Rules
 
