@@ -3,20 +3,19 @@
 ![TRADE.BAS gameplay screenshot](docs/trade_screenshot.png)
 ![TRADE.BAS color gameplay screenshot](docs/trade_screenshot_color.png)
 
-
 A modern Python re‑implementation of the classic 1970s/80s BASIC game
-originally distributed as `TRADE.BAS` with the Kaypro II (and other systems). 
+originally distributed as `TRADE.BAS` with the Kaypro II (and other systems).
 
 The game plays like I recall the original, though there are a few modifications to the display and game commands that (I think) make it a bit smoother of an experience while still preserving the feel of the classic game. I also added an option for computer-controlled players that was not in the original BASIC game.
 
-When I started this some years ago, this was a chance to work on my coding skills and expand my use of Python. In picking it back up recently (2026) it became a chance to explore agent coding. Much of the code, while based on my original port from BASIC, has been revised, rewritten, or expanded by coding agents. 
+When I started this some years ago, this was a chance to work on my coding skills and expand my use of Python. In picking it back up recently (2026) it became a chance to explore agent coding. Much of the code, while based on my original port from BASIC, has been revised, rewritten, or expanded by coding agents.
 
 ## Game Name and History
 
 *Star Lanes* was the title used in the original [1977 *Interface Age* publication
-by Steven Faber](<BASIC_code_files/Star Lanes code original publication in Interface magazine.pdf>). 
+by Steven Faber](<BASIC_code_files/Star Lanes code original publication in Interface magazine.pdf>).
 
-*[Star Traders](https://en.wikipedia.org/wiki/Star_Trader)* is an alternate name applied to the game at times, though the original (and subsequent) *Star Traders* games were a more-RPG style space-trading adventure (see linked article above). 
+*[Star Traders](https://en.wikipedia.org/wiki/Star_Trader)* is an alternate name applied to the game at times, though the original (and subsequent) *Star Traders* games were a more-RPG style space-trading adventure (see linked article above).
 
 ## Gameplay Summary
 
@@ -36,7 +35,7 @@ A tile-placement stock purchasing game for 1 - 4 players. Players can compete ag
 
 - *Colors:* While the original incarnations of the game would all have been in monochrome, this version does use a colorized mode as default, where company symbols and names are rendered in color. (See below in command line args for how to tweak color modes to match your preferred retro nostalgia scheme, should you so desire.)
 
-- *Display:* The original version printed only the map each turn, with a special command to display a player's portfolio. This version adds an updated portfolio to the right of the map, so there is no "Display Portfolio" or "Display Map" command. Similarly, the stock purchasing display is tweaked to confirm the previous purchase (or lack thereof) for player reference. 
+- *Display:* The original version printed only the map each turn, with a special command to display a player's portfolio. This version adds an updated portfolio to the right of the map, so there is no "Display Portfolio" or "Display Map" command. Similarly, the stock purchasing display is tweaked to confirm the previous purchase (or lack thereof) for player reference.
 
 - *Computer players:* The original BASIC code had no automated players. This version features the option to have one or more opponents be controlled by the computer at three levels of skill. Number and ability of computer players is set by the user during game startup.
 
@@ -54,6 +53,7 @@ See [strategy.md](docs/strategy.md) for a fuller description of how the computer
 Requires **Python 3.11 or later**.
 
 **Platform Support:**
+
 - **Linux and macOS**: Uses the `blessings` terminal backend (full color and formatting support via curses)
 - **Windows**: Uses the Windows terminal backend with `colorama` for color support (ANSI emulation)
 
@@ -104,11 +104,13 @@ python trade_main.py
 ### Command-Line Arguments
 
 - `--monochrome`: Disable ANSI color output. Useful for terminals with limited color support.
+
   ```bash
   python3 trade_main.py --monochrome
   ```
 
 - `--color-scheme {default,green,amber,white}`: Select a foreground color. In keeping with the retro nature of the game, users can specify (`green`, `amber`, `white`).
+
   ```bash
   python3 trade_main.py --color-scheme amber
   ```
@@ -116,9 +118,11 @@ python trade_main.py
 For regular gameplay you can safely ignore these subsequent flags, as they are used almost exclusively for development.
 
 - `--headless`: Run in non-interactive autoplay mode suitable for CI/smoke runs.
+
   ```bash
   python3 trade_main.py --headless
   ```
+
   Headless is authoritative: it enforces `autopilot=true`, `interactive=false`, and `pause-at-end=false`.
   Do not combine `--headless` with explicit mode flags (below).
 
@@ -135,11 +139,13 @@ Interested in modifying the game? Here is the key info on the current testing su
 From repository root:
 
 **Linux and macOS:**
+
 ```bash
 python3 -m pytest -q
 ```
 
 **Windows:**
+
 ```cmd
 python -m pytest -q
 ```
@@ -147,6 +153,7 @@ python -m pytest -q
 Both commands run the same test suite. Pytest discovery is restricted by `pytest.ini` to the tests directory.
 
 **Platform-Specific Notes:**
+
 - On Windows, tests for the `blessings` terminal backend are automatically skipped (blessings requires curses, which is unavailable on Windows).
 - On Unix-like systems, the Windows terminal backend tests run normally.
 - All platform-specific test skips are controlled by `@pytest.mark.skipif` decorators in the test files.
@@ -166,7 +173,3 @@ Both commands run the same test suite. Pytest discovery is restricted by `pytest
 This project is licensed under the MIT License. See the LICENSE file for details.
 
 The original BASIC source code and accompanying publication are included for historical reference. Their original copyright status is preserved.
-
-
-
-
