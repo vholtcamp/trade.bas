@@ -161,8 +161,9 @@ def log_econ_event(turn_number, event_type, company_symbols, players=None,
         log_file.write(json.dumps(payload, sort_keys=True) + '\n')
 
 
-
-
+# -----------------------------------------------------------------------------
+# Classes
+# -----------------------------------------------------------------------------
 
 class Player():
     '''
@@ -1309,7 +1310,7 @@ TWO_FOR_ONE_COLUMNS = [
 TWO_FOR_ONE_PLAYER_NAME_LENGTH = (SPECIAL_ANNOUNCEMENT_WIDTH - 2)//len(TWO_FOR_ONE_COLUMNS) - 1
 
 MERGER_PHRASE = 'has just been merged into'
-MERGER_CATEGORIES = ['Player', 'Old Stock', 'New Stock', 'Bonus']
+MERGER_CATEGORIES = ['Player', 'Old Stock', 'Total New Stock', 'Bonus']
 MERGER_COLUMNS = [
     'p.name[:MERGER_PLAYER_NAME_LENGTH]',
     'str(p.portfolio[losing_company.symbol])',
@@ -1492,9 +1493,6 @@ class Display():
     
     def _print_rule(self):
         print(f'{SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL} ' f'{SPECIAL_ANNOUNCEMENT_HORIZONTAL_RULE}' f' {SPECIAL_ANNOUNCEMENT_SIDE_SYMBOL}')
-
-
-
 
 
     def _print_blank(self):
