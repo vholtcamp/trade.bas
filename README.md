@@ -46,7 +46,7 @@ Winning this game is all about making smart choices with your money and planning
 
 Mergers are another big way to boost your wealth. When two companies merge, the shareholders of the smaller company get a bonus based on how many shares they own. This means it’s smart to invest in companies that might get bought out, especially if you can help make the merger happen by placing tiles. Stock splits are also important. When a company’s stock price gets too high (over $3000), the price is cut in half, but you get twice as many shares. This makes the stock easier to buy and can attract more players. By using dividends for steady income, mergers for big bonuses, and stock splits for long-term growth, you can build a strong portfolio and win the game.
 
-See stragegy.md (docs/strategy.md) for a fuller description of how the computer makes decisions, and how this might impact your strategy as a player.
+See [stragegy.md] (docs/strategy.md) for a fuller description of how the computer makes decisions, and how this might impact your strategy as a player.
 
 
 ## Quick Start
@@ -54,8 +54,8 @@ See stragegy.md (docs/strategy.md) for a fuller description of how the computer 
 Requires **Python 3.11 or later**.
 
 **Platform Support:**
-- **Linux and macOS**: Use the `blessings` terminal backend (full color and formatting support via curses)
-- **Windows**: Use the Windows terminal backend with `colorama` for color support (ANSI emulation)
+- **Linux and macOS**: Uses the `blessings` terminal backend (full color and formatting support via curses)
+- **Windows**: Uses the Windows terminal backend with `colorama` for color support (ANSI emulation)
 
 ### Linux and macOS
 
