@@ -122,6 +122,27 @@ def test_display_map_green_scheme_uses_green_foreground(game_factory):
     assert set(captured_fgs) == {"green"}
 
 
+def test_display_map_wraps_long_last_action_to_two_lines(game, capsys):
+    player = game.players[0]
+    game.active_player = player
+    game.last_action = "WRAPTOKEN " * 8
+
+    Display.display_map(game.display, player)
+
+    out = capsys.readouterr().out
+    wrapped_lines = [line for line in out.splitlines() if "WRAPTOKEN" in line]
+
+    assert len(wrapped_lines) == 2
+    header = (
+        trade_objects.MAP_HEADER
+        + trade_objects.PORTFOLIO_SPACER
+        + f"*** {game.active_player.name}'s Portfolio ***"
+    )
+    max_width = visible_len(header)
+    assert all(visible_len(line.strip()) <= max_width for line in wrapped_lines)
+    assert all(line.startswith("WRAPTOKEN") for line in wrapped_lines)
+
+
 def test_display_announcement_renders_content_rule_and_blank(game, capsys):
     lines = [
         ContentLine("Header"),

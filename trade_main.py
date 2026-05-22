@@ -212,13 +212,38 @@ def display_startup_summary(number_of_players, human_players, ai_difficulties):
     print()
 
 
+def prompt_setup_confirmation():
+    while True:
+        print("Keep this setup? Press Enter/Y to continue, R to redo, or Q to quit.")
+        print('> ', end='')
+        raw_input = input().strip().upper()
+
+        if raw_input in ('', 'Y'):
+            return True
+        if raw_input == 'R':
+            return False
+        if raw_input == 'Q':
+            sys.exit()
+
+        print('Please enter Enter, Y, R, or Q.')
+
+
+def get_confirmed_startup_configuration():
+    while True:
+        number_of_players, human_players, ai_difficulty, ai_difficulties = get_startup_configuration()
+
+        if not interactive or autopilot:
+            return number_of_players, human_players, ai_difficulty, ai_difficulties
+
+        display_startup_summary(number_of_players, human_players, ai_difficulties)
+        if prompt_setup_confirmation():
+            return number_of_players, human_players, ai_difficulty, ai_difficulties
+
+
 fullscreen_context = nullcontext() if monochrome else term.fullscreen()
 
 with fullscreen_context:
-    number_of_players, human_players, ai_difficulty, ai_difficulties = get_startup_configuration()
-
-    if interactive and not autopilot:
-        display_startup_summary(number_of_players, human_players, ai_difficulties)
+    number_of_players, human_players, ai_difficulty, ai_difficulties = get_confirmed_startup_configuration()
 
     max_turns = TOTAL_TURNS // number_of_players
     game = Game(number_of_players,

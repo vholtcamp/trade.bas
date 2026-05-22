@@ -5,6 +5,7 @@ import sys
 import shutil
 import locale
 import time
+import textwrap
 locale.setlocale(locale.LC_ALL, '')
 import json
 
@@ -61,6 +62,7 @@ FOUNDERS_BONUS_SHARES = 5
 TWO_FOR_ONE_PRICE = 3000
 DIVIDEND_MULTIPLIER = 0.05
 COMPUTER_THINK_DELAY_SECONDS = 1.1
+ACTION_STATUS_MAX_LINES = 2
 
 # BASIC rule: merger cash bonus is 10x losing share price,
 # prorated by ownership and truncated to integer
@@ -801,13 +803,13 @@ class Game():
                 if show_computer_details:
                     self.last_action = f"[COMPUTER TURN] {player.name} played {move} and {purchase_clause}"
                     self.display.display_map(player)
-                    self.display.any_to_continue()
+                    self.display.any_to_continue(leading_blank=True)
             else:
                 player.buy_stocks()
         elif show_computer_details:
             self.last_action = f"[COMPUTER TURN] {player.name} played {move}."
             self.display.display_map(player)
-            self.display.any_to_continue()
+            self.display.any_to_continue(leading_blank=True)
 
     def _auto_buy_stocks(self, player, is_autopilot_turn=False):
         before_cash = player.cash_on_hand
@@ -1413,15 +1415,32 @@ class Display():
     def input_prompt(self, input_string = "> "):
         return input(input_string)
 
-    def any_to_continue(self):
+    def any_to_continue(self, leading_blank=False):
         if self.game.headless:
             return
+        if leading_blank:
+            print('')
         input('Press enter key to continue.')
 
     def timed_pause(self, seconds):
         if self.game.headless or not self.game.interactive:
             return
         time.sleep(max(0.0, seconds))
+
+    def _wrapped_action_lines(self, action_text, wrap_width):
+        wrapped = textwrap.wrap(
+            action_text,
+            width=wrap_width,
+            break_long_words=False,
+            break_on_hyphens=False,
+        )
+        if len(wrapped) <= ACTION_STATUS_MAX_LINES:
+            return wrapped
+
+        kept = wrapped[: ACTION_STATUS_MAX_LINES - 1]
+        overflow = " ".join(wrapped[ACTION_STATUS_MAX_LINES - 1 :])
+        kept.append(textwrap.shorten(overflow, width=wrap_width, placeholder="..."))
+        return kept
 
 
     def prompt_stock_purchase(self, company, player):
@@ -1605,6 +1624,7 @@ class Display():
         print(f'{("-"*MAP_WIDTH).center(MAP_WIDTH)}')
         portfolio_header = f'*** {self.game.active_player.name}\'s Portfolio ***'
         header = MAP_HEADER + PORTFOLIO_SPACER + portfolio_header
+        status_width = visible_len(header)
         print(header)
 
         for row_num,row in enumerate(ROW_LIST):
@@ -1620,7 +1640,8 @@ class Display():
             print(f'{player_portfolio[row_num]}')
         print(f' ')
         if self.game.last_action:
-            print(self.game.last_action.center(MAP_WIDTH))
+            for line in self._wrapped_action_lines(self.game.last_action, status_width):
+                print(line.ljust(status_width))
 
     def display_end_of_game(self):
         '''Final display'''

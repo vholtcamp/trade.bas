@@ -211,7 +211,7 @@ def test_execute_turn_computer_player_shows_move_and_purchase_summary_with_pause
     pause_calls = []
     timed_pause_calls = []
 
-    def record_pause():
+    def record_pause(*_args, **_kwargs):
         pause_calls.append(True)
 
     def record_timed_pause(seconds):

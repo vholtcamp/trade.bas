@@ -234,3 +234,33 @@ def test_interactive_startup_prompts_each_computer_for_difficulty():
     assert result.returncode == 0
     assert "Select Computer 1 difficulty" in result.stdout
     assert "Select Computer 2 difficulty" in result.stdout
+
+
+def test_interactive_startup_shows_setup_confirmation_prompt():
+    result = subprocess.run(
+        [sys.executable, "trade_main.py"],
+        input="2\n2\nQ\n",
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
+    )
+
+    assert result.returncode == 0
+    assert "Game Setup Summary" in result.stdout
+    assert "Keep this setup? Press Enter/Y to continue, R to redo, or Q to quit." in result.stdout
+
+
+def test_interactive_startup_edit_restarts_player_configuration_loop():
+    result = subprocess.run(
+        [sys.executable, "trade_main.py"],
+        input="2\n1\nB\nR\n3\n3\nQ\n",
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout.count("How many total players (human + computer)") == 2
+    assert result.stdout.count("How many human players") == 2
