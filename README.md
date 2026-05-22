@@ -16,7 +16,7 @@ When I started this some years ago, this was a chance to work on my coding skill
 *Star Lanes* was the title used in the original [1977 *Interface Age* publication
 by Steven Faber](<BASIC_code_files/Star Lanes code original publication in Interface magazine.pdf>). 
 
-*[Star Traders](https://en.wikipedia.org/wiki/Star_Trader)* is an alternate name applied to the game at times, though the original *Star Traders* was a more-RPG style space-trading adventure, which spawned multiple variations and descendents (see linked article). 
+*[Star Traders](https://en.wikipedia.org/wiki/Star_Trader)* is an alternate name applied to the game at times, though the original (and subsequent) *Star Traders* games were a more-RPG style space-trading adventure (see linked article above). 
 
 ## Gameplay Summary
 
@@ -38,7 +38,7 @@ A tile-placement stock purchasing game for 1 - 4 players. Players can compete ag
 
 - *Display:* The original version printed only the map each turn, with a special command to display a player's portfolio. This version adds an updated portfolio to the right of the map, so there is no "Display Portfolio" or "Display Map" command. Similarly, the stock purchasing display is tweaked to confirm the previous purchase (or lack thereof) for player reference. 
 
-- *Computer players:* This version features the option to have one or more opponents be controlled by the computer at three levels of skill. Number and ability of computer players is set by the user during game startup.
+- *Computer players:* The original BASIC code had no automated players. This version features the option to have one or more opponents be controlled by the computer at three levels of skill. Number and ability of computer players is set by the user during game startup.
 
 ## Strategy
 
@@ -46,7 +46,7 @@ Winning this game is all about making smart choices with your money and planning
 
 Mergers are another big way to boost your wealth. When two companies merge, the shareholders of the smaller company get a bonus based on how many shares they own. This means it’s smart to invest in companies that might get bought out, especially if you can help make the merger happen by placing tiles. Stock splits are also important. When a company’s stock price gets too high (over $3000), the price is cut in half, but you get twice as many shares. This makes the stock easier to buy and can attract more players. By using dividends for steady income, mergers for big bonuses, and stock splits for long-term growth, you can build a strong portfolio and win the game.
 
-See [stragegy.md] (docs/strategy.md) for a fuller description of how the computer makes decisions, and how this might impact your strategy as a player.
+See [stragegy.md](docs/strategy.md) for a fuller description of how the computer makes decisions, and how this might impact your strategy as a player.
 
 
 ## Quick Start
