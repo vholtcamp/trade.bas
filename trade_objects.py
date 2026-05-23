@@ -707,6 +707,10 @@ class Game():
         self.ai_thinking_mode = self._normalize_ai_thinking_mode(ai_thinking_mode)
         self.ai_last_trace = None
         self.ai_last_trace_player = None
+        self.ai_last_legal_moves = []
+        self.ai_last_legal_moves_player = None
+        self.ai_last_stock_reason = None
+        self.ai_last_stock_reason_player = None
         self._first_player_announced = False
 
         if human_players is None:
@@ -729,8 +733,8 @@ class Game():
 
     def _build_players(self):
         if self.interactive and not self.autopilot:
-            resp = input("View instructions? (Y/n): ").strip().upper()
-            if resp in ("", "Y"):
+            resp = input("View instructions? (y/N): ").strip().upper()
+            if resp == "Y":
                 self.display.display_instructions()
                 self.display.any_to_continue()
 
@@ -789,6 +793,8 @@ class Game():
     def choose_ai_move(self, player, legal_moves):
         self.ai_last_trace = None
         self.ai_last_trace_player = None
+        self.ai_last_stock_reason = None
+        self.ai_last_stock_reason_player = None
         strategy = player.ai_strategy or build_ai_strategy(player.ai_difficulty)
         capture_trace = self._should_show_ai_thinking(player)
         selected = strategy.choose_move(self, player, legal_moves, capture_trace=capture_trace)
@@ -813,6 +819,10 @@ class Game():
         show_computer_details = self._should_show_computer_turn_details(player)
         show_ai_thinking = self._should_show_ai_thinking(player)
         legal_moves = self._get_legal_moves(self.map)
+
+        if show_ai_thinking and self.ai_thinking_mode == 'detailed':
+            self.ai_last_legal_moves = list(legal_moves)
+            self.ai_last_legal_moves_player = player.name
 
         if show_computer_details:
             legal = ", ".join(legal_moves)
@@ -858,6 +868,11 @@ class Game():
             for symbol in self.active_companies.keys()
         }
         strategy = player.ai_strategy or build_ai_strategy(player.ai_difficulty)
+
+        if self._should_show_ai_thinking(player) and self.ai_thinking_mode == 'detailed':
+            self.ai_last_stock_reason = self._build_stock_reason(strategy, player)
+            self.ai_last_stock_reason_player = player.name
+
         strategy.buy_stocks(self, player)
         purchase_clause = self._summarize_auto_purchases(
             player,
@@ -867,6 +882,41 @@ class Game():
         label = "Autopilot" if is_autopilot_turn else player.name
         self.last_action = f"{label} {purchase_clause}"
         return purchase_clause
+
+    def _build_stock_reason(self, strategy, player):
+        strategy_name = (getattr(strategy, 'name', '') or '').lower()
+
+        if strategy_name == 'beginner':
+            active_count = len(self.active_companies)
+            return (
+                "Stock logic: beginner sweeps companies alphabetically, buying roughly half "
+                "of affordable shares per company (cap 20), with no reserve optimization "
+                f"across {active_count} active companies."
+            )
+
+        reserve = max(500, int(player.net_worth * 0.1))
+        base_reason = (
+            "Stock logic: score-ranked buys (dividend yield, expansion lanes, split proximity, "
+            f"concentration control) while keeping about ${reserve:,} cash reserve."
+        )
+
+        ranker = getattr(strategy, '_rank_affordable_companies', None)
+        if callable(ranker):
+            try:
+                ranked = ranker(self, player, reserve)
+            except Exception:
+                return base_reason
+
+            if not ranked:
+                return base_reason + " No company met affordability+reserve constraints this pass."
+
+            top_targets = []
+            for score, company in ranked[:3]:
+                top_targets.append(f"{company.symbol}:{score:.0f}")
+
+            return base_reason + f" Top targets before buys: {', '.join(top_targets)}."
+
+        return base_reason
 
     def _summarize_auto_purchases(self, player, before_portfolio, before_cash):
         purchases = []
@@ -1497,6 +1547,15 @@ class Display():
 
         lines = [f"AI analysis ({strategy_name}): selected {selected_move}"]
 
+        if self.game.ai_last_legal_moves_player == player.name and self.game.ai_last_legal_moves:
+            options = ", ".join(self.game.ai_last_legal_moves)
+            options_text = textwrap.shorten(
+                f"Options offered: {options}",
+                width=wrap_width,
+                placeholder='...'
+            )
+            lines.append(options_text)
+
         for idx, candidate in enumerate(ranked_moves, start=1):
             factors = ', '.join(candidate.get('factors', [])[:2]) or 'no major factors'
             candidate_text = (
@@ -1513,6 +1572,9 @@ class Display():
                 f"opponent best {selected_components.get('opponent_best', 0.0):.0f}"
             )
             lines.append(textwrap.shorten(component_text, width=wrap_width, placeholder='...'))
+
+        if self.game.ai_last_stock_reason_player == player.name and self.game.ai_last_stock_reason:
+            lines.append(textwrap.shorten(self.game.ai_last_stock_reason, width=wrap_width, placeholder='...'))
 
         return lines
 

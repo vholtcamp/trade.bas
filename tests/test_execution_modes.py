@@ -306,19 +306,19 @@ def test_execute_turn_detailed_mode_keeps_thinking_in_map_flow(game_factory, mon
         return "A1"
 
     computer.ai_strategy = SimpleNamespace(
+        name="advanced",
         choose_move=fake_choose_move,
         buy_stocks=lambda *_args, **_kwargs: None,
     )
 
-    map_trace_snapshots = []
+    map_snapshots = []
 
     def record_map(_player):
-        map_trace_snapshots.append(game.ai_last_trace)
+        map_snapshots.append(game.display._build_ai_thinking_lines(computer, 120))
 
     monkeypatch.setattr(game, "_get_legal_moves", lambda _map: ["A1", "B2", "C3", "D4", "E5"])
     monkeypatch.setattr(game, "play_move", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(game, "pay_dividends", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(game, "_auto_buy_stocks", lambda *_args, **_kwargs: "bought 1 share of Test Company")
     monkeypatch.setattr(game.display, "display_map", record_map)
     monkeypatch.setattr(game.display, "timed_pause", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(game.display, "any_to_continue", lambda *_args, **_kwargs: None)
@@ -331,7 +331,9 @@ def test_execute_turn_detailed_mode_keeps_thinking_in_map_flow(game_factory, mon
     game.execute_turn(computer, autopilot=False)
 
     assert game.ai_last_trace_player == computer.name
-    assert any(snapshot for snapshot in map_trace_snapshots)
+    flattened = "\n".join("\n".join(lines) for lines in map_snapshots if lines)
+    assert "Options offered:" in flattened
+    assert "Stock logic:" in flattened
 
 
 @pytest.mark.interactive
