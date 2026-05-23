@@ -733,7 +733,7 @@ class Game():
 
     def _build_players(self):
         if self.interactive and not self.autopilot:
-            resp = input("View instructions? (y/N): ").strip().upper()
+            resp = input("View instructions? (Y to view, Enter to skip): ").strip().upper()
             if resp == "Y":
                 self.display.display_instructions()
                 self.display.any_to_continue()
@@ -884,6 +884,15 @@ class Game():
         return purchase_clause
 
     def _build_stock_reason(self, strategy, player):
+        explain_stock_plan = getattr(strategy, 'explain_stock_plan', None)
+        if callable(explain_stock_plan):
+            try:
+                explained = explain_stock_plan(self, player, limit=3)
+            except Exception:
+                explained = None
+            if explained:
+                return explained
+
         strategy_name = (getattr(strategy, 'name', '') or '').lower()
 
         if strategy_name == 'beginner':
@@ -896,8 +905,8 @@ class Game():
 
         reserve = max(500, int(player.net_worth * 0.1))
         base_reason = (
-            "Stock logic: score-ranked buys (dividend yield, expansion lanes, split proximity, "
-            f"concentration control) while keeping about ${reserve:,} cash reserve."
+            f"Stock logic: reserve target about ${reserve:,}; "
+            "rank factors are dividend yield, expansion lanes, split proximity, and concentration control."
         )
 
         ranker = getattr(strategy, '_rank_affordable_companies', None)
@@ -914,7 +923,11 @@ class Game():
             for score, company in ranked[:3]:
                 top_targets.append(f"{company.symbol}:{score:.0f}")
 
-            return base_reason + f" Top targets before buys: {', '.join(top_targets)}."
+            return (
+                f"Stock logic: top targets before buys {', '.join(top_targets)}; "
+                f"reserve target about ${reserve:,}; "
+                "rank factors are dividend yield, expansion lanes, split proximity, and concentration control."
+            )
 
         return base_reason
 
@@ -1574,7 +1587,18 @@ class Display():
             lines.append(textwrap.shorten(component_text, width=wrap_width, placeholder='...'))
 
         if self.game.ai_last_stock_reason_player == player.name and self.game.ai_last_stock_reason:
-            lines.append(textwrap.shorten(self.game.ai_last_stock_reason, width=wrap_width, placeholder='...'))
+            wrapped_reason = textwrap.wrap(
+                self.game.ai_last_stock_reason,
+                width=wrap_width,
+                break_long_words=False,
+                break_on_hyphens=False,
+            )
+            if len(wrapped_reason) <= 3:
+                lines.extend(wrapped_reason)
+            else:
+                lines.extend(wrapped_reason[:2])
+                overflow = " ".join(wrapped_reason[2:])
+                lines.append(textwrap.shorten(overflow, width=wrap_width, placeholder='...'))
 
         return lines
 

@@ -22,6 +22,9 @@ class BaseAIStrategy:
     def buy_stocks(self, game, player):
         raise NotImplementedError
 
+    def explain_stock_plan(self, game, player, limit=3):
+        return None
+
 
 class BeginnerAIStrategy(BaseAIStrategy):
     """Behavior-parity strategy: random move and conservative broad buying."""
@@ -73,6 +76,24 @@ class BeginnerAIStrategy(BaseAIStrategy):
             game.last_action = f"Autopilot purchased {shares} shares of {name}"
         else:
             game.last_action = "Autopilot skipped stock purchases"
+
+    def explain_stock_plan(self, game, player, limit=3):
+        active_symbols = sorted(game.active_companies.keys())
+        if not active_symbols:
+            return "Stock logic: no active companies to buy this turn."
+
+        samples = []
+        for symbol in active_symbols[:limit]:
+            company = game.active_companies[symbol]
+            max_affordable = int(player.cash_on_hand // company.share_price)
+            target = min((max_affordable // 2) + 1, 20) if max_affordable > 0 else 0
+            samples.append(f"{symbol} (${company.share_price:,} -> target about {target} shares)")
+
+        return (
+            "Stock logic: beginner buys broadly in alphabetical order, usually around half of what is "
+            "affordable for each company (cap 20), without reserve tuning. "
+            f"Examples this turn: {', '.join(samples)}."
+        )
 
 
 class IntermediateAIStrategy(BaseAIStrategy):
@@ -203,7 +224,21 @@ class IntermediateAIStrategy(BaseAIStrategy):
         ranked.sort(key=lambda item: item[0], reverse=True)
         return ranked
 
-    def _score_company_purchase(self, game, player, company):
+    def _rank_affordable_companies_explained(self, game, player, reserve):
+        ranked = []
+
+        for symbol in sorted(game.active_companies.keys()):
+            company = game.active_companies[symbol]
+            if player.cash_on_hand - company.share_price < reserve:
+                continue
+
+            score, details = self._score_company_purchase(game, player, company, explain=True)
+            ranked.append((score, company, details))
+
+        ranked.sort(key=lambda item: item[0], reverse=True)
+        return ranked
+
+    def _score_company_purchase(self, game, player, company, explain=False):
         dividend_value = 0.05 * company.share_price
         owned = player.portfolio.get(company.symbol, 0)
         expansion_chances = 0
@@ -216,12 +251,51 @@ class IntermediateAIStrategy(BaseAIStrategy):
         split_proximity = max(0, company.share_price - 2600) / 400
         concentration_penalty = owned * 6
 
-        return (
+        total_score = (
             dividend_value
             + (expansion_chances * 40)
             + (owned * 10)
             + (split_proximity * 120)
             - concentration_penalty
+        )
+
+        if explain:
+            return total_score, {
+                "share_price": company.share_price,
+                "dividend_signal": dividend_value,
+                "expansion_chances": expansion_chances,
+                "expansion_signal": expansion_chances * 40,
+                "owned": owned,
+                "ownership_signal": owned * 10,
+                "split_signal": split_proximity * 120,
+                "concentration_penalty": concentration_penalty,
+            }
+
+        return total_score
+
+    def explain_stock_plan(self, game, player, limit=3):
+        reserve = max(500, int(player.net_worth * 0.1))
+        ranked = self._rank_affordable_companies_explained(game, player, reserve)
+
+        if not ranked:
+            return (
+                f"Stock logic: keep about ${reserve:,} in reserve; no company met affordability "
+                "plus reserve constraints this turn."
+            )
+
+        explanations = []
+        for score, company, details in ranked[:limit]:
+            explanations.append(
+                f"{company.symbol} (${details['share_price']:,}, score {score:.0f}): "
+                f"dividend {details['dividend_signal']:.0f}, expansion lanes {details['expansion_chances']} "
+                f"(+{details['expansion_signal']:.0f}), owned {details['owned']} "
+                f"(+{details['ownership_signal']:.0f}), split pressure +{details['split_signal']:.0f}, "
+                f"concentration -{details['concentration_penalty']:.0f}"
+            )
+
+        return (
+            f"Stock logic: keeps about ${reserve:,} in reserve and ranks companies by value signals. "
+            f"Top priorities: {'; '.join(explanations)}."
         )
 
 
