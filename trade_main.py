@@ -62,6 +62,12 @@ def parse_args():
         help="Enable or disable interactive prompts",
     )
     parser.add_argument(
+        "--show-ai-thinking",
+        choices=["off", "summary", "detailed"],
+        default="off",
+        help="Show optional computer-thinking details: off, summary, or detailed",
+    )
+    parser.add_argument(
         "--pause-at-end",
         type=parse_bool,
         nargs="?",
@@ -104,6 +110,7 @@ else:
 monochrome = args.monochrome
 requested_color_scheme = ColorScheme(args.color_scheme)
 color_scheme = ColorScheme.DEFAULT if monochrome else requested_color_scheme
+ai_thinking_mode = args.show_ai_thinking
 
 
 
@@ -165,12 +172,36 @@ def prompt_ai_difficulty(label='computer'):
         print('Please enter B, I, A, or Q.')
 
 
+def prompt_ai_thinking_mode():
+    options = {
+        'O': 'off',
+        'S': 'summary',
+        'D': 'detailed',
+    }
+
+    while True:
+        print('Show computer thinking? [O]ff, [S]ummary, [D]etailed (Q to quit)')
+        print('> ', end='')
+        raw_input = input().strip().upper()
+
+        if raw_input == 'Q':
+            sys.exit()
+
+        if not raw_input:
+            return 'off'
+
+        if raw_input in options:
+            return options[raw_input]
+
+        print('Please enter O, S, D, or Q.')
+
+
 def get_startup_configuration():
     if autopilot:
-        return 2, 0, 'beginner', ['beginner', 'beginner']
+        return 2, 0, 'beginner', ['beginner', 'beginner'], ai_thinking_mode
 
     if not interactive:
-        return 2, 2, 'beginner', []
+        return 2, 2, 'beginner', [], ai_thinking_mode
 
     number_of_players = prompt_int_with_quit('How many total players (human + computer)', 1, MAX_PLAYERS)
     human_players = prompt_int_with_quit('How many human players', 1, number_of_players)
@@ -178,16 +209,18 @@ def get_startup_configuration():
     computer_players = number_of_players - human_players
     ai_difficulty = 'beginner'
     ai_difficulties = []
+    selected_ai_thinking_mode = ai_thinking_mode
     if computer_players > 0:
         for i in range(1, computer_players + 1):
             difficulty = prompt_ai_difficulty(label=f'Computer {i}')
             ai_difficulties.append(difficulty)
         ai_difficulty = ai_difficulties[0]
+        selected_ai_thinking_mode = prompt_ai_thinking_mode()
 
-    return number_of_players, human_players, ai_difficulty, ai_difficulties
+    return number_of_players, human_players, ai_difficulty, ai_difficulties, selected_ai_thinking_mode
 
 
-def display_startup_summary(number_of_players, human_players, ai_difficulties):
+def display_startup_summary(number_of_players, human_players, ai_difficulties, ai_thinking_mode):
     computer_players = number_of_players - human_players
     label_width = 15
     rows = [
@@ -199,6 +232,7 @@ def display_startup_summary(number_of_players, human_players, ai_difficulties):
     if computer_players > 0:
         for i, difficulty in enumerate(ai_difficulties, start=1):
             rows.append(f"{'Computer ' + str(i) + ':':<{label_width}} {difficulty.title()}")
+        rows.append(f"{'AI thinking:':<{label_width}} {ai_thinking_mode.title()}")
 
     border = "=" * max(len(" Game Setup Summary "), max(len(row) for row in rows))
 
@@ -230,20 +264,20 @@ def prompt_setup_confirmation():
 
 def get_confirmed_startup_configuration():
     while True:
-        number_of_players, human_players, ai_difficulty, ai_difficulties = get_startup_configuration()
+        number_of_players, human_players, ai_difficulty, ai_difficulties, selected_ai_thinking_mode = get_startup_configuration()
 
         if not interactive or autopilot:
-            return number_of_players, human_players, ai_difficulty, ai_difficulties
+            return number_of_players, human_players, ai_difficulty, ai_difficulties, selected_ai_thinking_mode
 
-        display_startup_summary(number_of_players, human_players, ai_difficulties)
+        display_startup_summary(number_of_players, human_players, ai_difficulties, selected_ai_thinking_mode)
         if prompt_setup_confirmation():
-            return number_of_players, human_players, ai_difficulty, ai_difficulties
+            return number_of_players, human_players, ai_difficulty, ai_difficulties, selected_ai_thinking_mode
 
 
 fullscreen_context = nullcontext() if monochrome else term.fullscreen()
 
 with fullscreen_context:
-    number_of_players, human_players, ai_difficulty, ai_difficulties = get_confirmed_startup_configuration()
+    number_of_players, human_players, ai_difficulty, ai_difficulties, selected_ai_thinking_mode = get_confirmed_startup_configuration()
 
     max_turns = TOTAL_TURNS // number_of_players
     game = Game(number_of_players,
@@ -259,6 +293,7 @@ with fullscreen_context:
                 human_players=human_players,
                 ai_difficulty=ai_difficulty,
                 ai_difficulties=ai_difficulties,
+                ai_thinking_mode=selected_ai_thinking_mode,
                 )
 
     while game.turn_number <= game.max_turns:

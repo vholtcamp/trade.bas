@@ -686,7 +686,7 @@ class Company():
 
 class Game():
 
-    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, headless = False, pause_at_end=True, monochrome=False, color_scheme=ColorScheme.DEFAULT, debug_econ=False, human_players=None, ai_difficulty='beginner', ai_difficulties=None):
+    def __init__(self, number_of_players, terminal, max_turns, interactive=True, autopilot=False, headless = False, pause_at_end=True, monochrome=False, color_scheme=ColorScheme.DEFAULT, debug_econ=False, human_players=None, ai_difficulty='beginner', ai_difficulties=None, ai_thinking_mode='off'):
         self.turn_number = 1
         self.number_of_players = number_of_players
         self.display = Display(self, monochrome=monochrome, color_scheme=color_scheme)
@@ -704,6 +704,9 @@ class Game():
         self.pause_at_end = pause_at_end
         self.ai_difficulty = ai_difficulty
         self.ai_difficulties = list(ai_difficulties or [])
+        self.ai_thinking_mode = self._normalize_ai_thinking_mode(ai_thinking_mode)
+        self.ai_last_trace = None
+        self.ai_last_trace_player = None
         self._first_player_announced = False
 
         if human_players is None:
@@ -717,6 +720,12 @@ class Game():
         random.shuffle(self.players)
         self.map = Map()
         self.active_companies = collections.OrderedDict()
+
+    def _normalize_ai_thinking_mode(self, mode):
+        normalized = (mode or 'off').strip().lower()
+        if normalized in ('off', 'summary', 'detailed'):
+            return normalized
+        return 'off'
 
     def _build_players(self):
         if self.interactive and not self.autopilot:
@@ -778,12 +787,31 @@ class Game():
         return self.ai_difficulty
 
     def choose_ai_move(self, player, legal_moves):
+        self.ai_last_trace = None
+        self.ai_last_trace_player = None
         strategy = player.ai_strategy or build_ai_strategy(player.ai_difficulty)
-        return strategy.choose_move(self, player, legal_moves)
+        capture_trace = self._should_show_ai_thinking(player)
+        selected = strategy.choose_move(self, player, legal_moves, capture_trace=capture_trace)
+        if capture_trace and self.ai_last_trace:
+            self.ai_last_trace_player = player.name
+        return selected
+
+    def _should_show_ai_thinking(self, player):
+        return self.ai_thinking_mode != 'off' and self._should_show_computer_turn_details(player)
+
+    def _ai_summary_from_trace(self):
+        if not self.ai_last_trace:
+            return ''
+
+        factors = self.ai_last_trace.get('selected_factors') or []
+        if not factors:
+            return ''
+        return '; '.join(factors[:3])
 
     def execute_turn(self, player, autopilot=False):
         is_auto_turn = autopilot or player.is_computer
         show_computer_details = self._should_show_computer_turn_details(player)
+        show_ai_thinking = self._should_show_ai_thinking(player)
         legal_moves = self._get_legal_moves(self.map)
 
         if show_computer_details:
@@ -793,6 +821,7 @@ class Game():
             self.display.timed_pause(COMPUTER_THINK_DELAY_SECONDS)
 
         move = player.choose_move(legal_moves, is_auto_turn)
+
         self.play_move(player, move)
 
         self.pay_dividends(player)
@@ -802,13 +831,23 @@ class Game():
             if is_auto_turn:
                 purchase_clause = self._auto_buy_stocks(player, is_autopilot_turn=autopilot)
                 if show_computer_details:
-                    self.last_action = f"[COMPUTER TURN] {player.name} played {move} and {purchase_clause}"
+                    thinking_clause = ''
+                    if show_ai_thinking:
+                        summary = self._ai_summary_from_trace()
+                        if summary:
+                            thinking_clause = f" ({summary})"
+                    self.last_action = f"[COMPUTER TURN] {player.name} played {move}{thinking_clause} and {purchase_clause}"
                     self.display.display_map(player)
                     self.display.any_to_continue(leading_blank=True)
             else:
                 player.buy_stocks()
         elif show_computer_details:
-            self.last_action = f"[COMPUTER TURN] {player.name} played {move}."
+            thinking_clause = ''
+            if show_ai_thinking:
+                summary = self._ai_summary_from_trace()
+                if summary:
+                    thinking_clause = f" ({summary})"
+            self.last_action = f"[COMPUTER TURN] {player.name} played {move}{thinking_clause}."
             self.display.display_map(player)
             self.display.any_to_continue(leading_blank=True)
 
@@ -1310,7 +1349,7 @@ TWO_FOR_ONE_COLUMNS = [
 TWO_FOR_ONE_PLAYER_NAME_LENGTH = (SPECIAL_ANNOUNCEMENT_WIDTH - 2)//len(TWO_FOR_ONE_COLUMNS) - 1
 
 MERGER_PHRASE = 'has just been merged into'
-MERGER_CATEGORIES = ['Player', 'Old Stock', 'Total New Stock', 'Bonus']
+MERGER_CATEGORIES = ['Player', 'Old Stock', 'Total New', 'Bonus']
 MERGER_COLUMNS = [
     'p.name[:MERGER_PLAYER_NAME_LENGTH]',
     'str(p.portfolio[losing_company.symbol])',
@@ -1442,6 +1481,40 @@ class Display():
         overflow = " ".join(wrapped[ACTION_STATUS_MAX_LINES - 1 :])
         kept.append(textwrap.shorten(overflow, width=wrap_width, placeholder="..."))
         return kept
+
+    def _build_ai_thinking_lines(self, player, wrap_width):
+        if self.game.ai_thinking_mode != 'detailed':
+            return []
+        if not self.game.ai_last_trace:
+            return []
+        if self.game.ai_last_trace_player != player.name:
+            return []
+
+        trace = self.game.ai_last_trace
+        strategy_name = trace.get('strategy', 'computer').title()
+        selected_move = trace.get('selected_move', '?')
+        ranked_moves = trace.get('ranked_moves', [])[:3]
+
+        lines = [f"AI analysis ({strategy_name}): selected {selected_move}"]
+
+        for idx, candidate in enumerate(ranked_moves, start=1):
+            factors = ', '.join(candidate.get('factors', [])[:2]) or 'no major factors'
+            candidate_text = (
+                f"{idx}. {candidate.get('move', '?')} score {candidate.get('score', 0):.0f} "
+                f"| {factors}"
+            )
+            lines.append(textwrap.shorten(candidate_text, width=wrap_width, placeholder='...'))
+
+        selected_components = trace.get('selected_components') or {}
+        if selected_components:
+            component_text = (
+                f"base {selected_components.get('base_score', 0.0):.0f}, "
+                f"net delta {selected_components.get('immediate_delta', 0.0):+.0f}, "
+                f"opponent best {selected_components.get('opponent_best', 0.0):.0f}"
+            )
+            lines.append(textwrap.shorten(component_text, width=wrap_width, placeholder='...'))
+
+        return lines
 
 
     def prompt_stock_purchase(self, company, player):
@@ -1639,6 +1712,12 @@ class Display():
         print(f' ')
         if self.game.last_action:
             for line in self._wrapped_action_lines(self.game.last_action, status_width):
+                print(line.ljust(status_width))
+
+        ai_lines = self._build_ai_thinking_lines(player, status_width)
+        if ai_lines:
+            print('')
+            for line in ai_lines:
                 print(line.ljust(status_width))
 
     def display_end_of_game(self):

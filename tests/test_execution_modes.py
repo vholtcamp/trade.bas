@@ -230,6 +230,110 @@ def test_execute_turn_computer_player_shows_move_and_purchase_summary_with_pause
     assert len(pause_calls) == 1
 
 
+def test_execute_turn_summary_mode_appends_ai_thinking_factors(game_factory, monkeypatch):
+    game = game_factory(interactive=False, autopilot=False, number_of_players=2)
+    game.interactive = True
+    game.headless = False
+    game.human_players = 1
+    game.computer_players = 1
+    game.ai_thinking_mode = "summary"
+    game.players[0].is_computer = False
+    game.players[1].is_computer = True
+
+    computer = game.players[1]
+    game.active_player = computer
+    company = SimpleNamespace(symbol="T", name="Test Company", share_price=100)
+    game.active_companies = OrderedDict([(company.symbol, company)])
+
+    def fake_choose_move(_game, _player, legal_moves, capture_trace=False):
+        assert capture_trace is True
+        _game.ai_last_trace = {
+            "selected_move": legal_moves[0],
+            "selected_factors": ["merger +1300", "adjacent stars +500"],
+        }
+        return legal_moves[0]
+
+    computer.ai_strategy = SimpleNamespace(
+        choose_move=fake_choose_move,
+        buy_stocks=lambda *_args, **_kwargs: None,
+    )
+
+    monkeypatch.setattr(game, "_get_legal_moves", lambda _map: ["A1", "B2", "C3", "D4", "E5"])
+    monkeypatch.setattr(game, "play_move", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game, "pay_dividends", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game, "_auto_buy_stocks", lambda *_args, **_kwargs: "bought 1 share of Test Company")
+    monkeypatch.setattr(game.display, "display_map", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game.display, "timed_pause", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game.display, "any_to_continue", lambda *_args, **_kwargs: None)
+
+    game.execute_turn(computer, autopilot=False)
+
+    assert "merger +1300" in game.last_action
+    assert "adjacent stars +500" in game.last_action
+
+
+def test_execute_turn_detailed_mode_keeps_thinking_in_map_flow(game_factory, monkeypatch):
+    game = game_factory(interactive=False, autopilot=False, number_of_players=2)
+    game.interactive = True
+    game.headless = False
+    game.human_players = 1
+    game.computer_players = 1
+    game.ai_thinking_mode = "detailed"
+    game.players[0].is_computer = False
+    game.players[1].is_computer = True
+
+    computer = game.players[1]
+    game.active_player = computer
+    company = SimpleNamespace(symbol="T", name="Test Company", share_price=100)
+    game.active_companies = OrderedDict([(company.symbol, company)])
+
+    def fake_choose_move(_game, _player, legal_moves, capture_trace=False):
+        assert capture_trace is True
+        _game.ai_last_trace = {
+            "strategy": "advanced",
+            "selected_move": "A1",
+            "selected_factors": ["merger +1300"],
+            "ranked_moves": [
+                {"move": "A1", "score": 1820.0, "factors": ["merger +1300"]},
+                {"move": "B2", "score": 950.0, "factors": ["expansion +900"]},
+            ],
+            "selected_components": {
+                "base_score": 1600.0,
+                "immediate_delta": 90.0,
+                "opponent_best": 340.0,
+            },
+        }
+        return "A1"
+
+    computer.ai_strategy = SimpleNamespace(
+        choose_move=fake_choose_move,
+        buy_stocks=lambda *_args, **_kwargs: None,
+    )
+
+    map_trace_snapshots = []
+
+    def record_map(_player):
+        map_trace_snapshots.append(game.ai_last_trace)
+
+    monkeypatch.setattr(game, "_get_legal_moves", lambda _map: ["A1", "B2", "C3", "D4", "E5"])
+    monkeypatch.setattr(game, "play_move", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game, "pay_dividends", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game, "_auto_buy_stocks", lambda *_args, **_kwargs: "bought 1 share of Test Company")
+    monkeypatch.setattr(game.display, "display_map", record_map)
+    monkeypatch.setattr(game.display, "timed_pause", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(game.display, "any_to_continue", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        game.display,
+        "display_announcement",
+        lambda *_args, **_kwargs: pytest.fail("detailed mode should not use announcement popups"),
+    )
+
+    game.execute_turn(computer, autopilot=False)
+
+    assert game.ai_last_trace_player == computer.name
+    assert any(snapshot for snapshot in map_trace_snapshots)
+
+
 @pytest.mark.interactive
 def test_constructor_interactive_mode_uses_fixture_local_responses(monkeypatch, scripted_input):
     instruction_calls = []

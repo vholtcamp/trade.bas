@@ -2,12 +2,21 @@ import random
 from copy import deepcopy
 
 
+def _format_factor(label, value):
+    return f"{label} {value:+.0f}"
+
+
+def _top_factor_strings(factors, limit=3):
+    ranked = sorted(factors, key=lambda item: abs(item[1]), reverse=True)
+    return [_format_factor(label, value) for label, value in ranked[:limit]]
+
+
 class BaseAIStrategy:
     """Strategy interface for computer-controlled turns."""
 
     name = "base"
 
-    def choose_move(self, game, player, legal_moves):
+    def choose_move(self, game, player, legal_moves, capture_trace=False):
         raise NotImplementedError
 
     def buy_stocks(self, game, player):
@@ -19,10 +28,28 @@ class BeginnerAIStrategy(BaseAIStrategy):
 
     name = "beginner"
 
-    def choose_move(self, game, player, legal_moves):
+    def choose_move(self, game, player, legal_moves, capture_trace=False):
         shuffled = list(legal_moves)
         random.shuffle(shuffled)
-        return shuffled[0]
+        selected = shuffled[0]
+
+        if capture_trace:
+            game.ai_last_trace = {
+                "strategy": self.name,
+                "selected_move": selected,
+                "selection_mode": "random",
+                "selected_factors": ["random selection +0"],
+                "ranked_moves": [
+                    {
+                        "move": move,
+                        "score": 0.0,
+                        "factors": ["random selection +0"],
+                    }
+                    for move in shuffled
+                ],
+            }
+
+        return selected
 
     def buy_stocks(self, game, player):
         purchases = []
@@ -53,48 +80,87 @@ class IntermediateAIStrategy(BaseAIStrategy):
 
     name = "intermediate"
 
-    def choose_move(self, game, player, legal_moves):
+    def choose_move(self, game, player, legal_moves, capture_trace=False):
         best_move = legal_moves[0]
         best_score = float("-inf")
+        ranked = []
+        factors_by_move = {}
 
         for move in legal_moves:
-            score = self._score_move(game, player, move)
+            if capture_trace:
+                score, factors = self._score_move(game, player, move, explain=True)
+                factors_by_move[move] = _top_factor_strings(factors)
+                ranked.append((move, score))
+            else:
+                score = self._score_move(game, player, move)
             if score > best_score:
                 best_score = score
                 best_move = move
 
         # Preserve some unpredictability so it doesn't feel robotic.
+        selection_mode = "best-score"
+        selected_move = best_move
         if random.random() < 0.2:
-            return random.choice(legal_moves)
-        return best_move
+            selected_move = random.choice(legal_moves)
+            selection_mode = "random-override"
 
-    def _score_move(self, game, player, move):
+        if capture_trace:
+            if not ranked:
+                ranked = [(move, self._score_move(game, player, move)) for move in legal_moves]
+            ranked_entries = sorted(ranked, key=lambda item: item[1], reverse=True)
+            game.ai_last_trace = {
+                "strategy": self.name,
+                "selected_move": selected_move,
+                "selection_mode": selection_mode,
+                "selected_factors": factors_by_move.get(selected_move, []),
+                "ranked_moves": [
+                    {
+                        "move": move,
+                        "score": score,
+                        "factors": factors_by_move.get(move, []),
+                    }
+                    for move, score in ranked_entries
+                ],
+            }
+
+        return selected_move
+
+    def _score_move(self, game, player, move, explain=False):
         nsew = game.map.nsew(move)
         score = 0.0
+        factors = []
+
+        def add_factor(label, value):
+            nonlocal score
+            score += value
+            factors.append((label, value))
 
         if game.touches_multiple_companies(nsew):
-            score += 1300
+            add_factor("merger", 1300)
             companies = [game.active_companies[s] for s in nsew.companies]
             winner, loser = game._select_merger_pair(companies)
-            score += player.portfolio.get(winner.symbol, 0) * 25
-            score += player.portfolio.get(loser.symbol, 0) * 15
-            score -= sum(
+            add_factor("winner stake", player.portfolio.get(winner.symbol, 0) * 25)
+            add_factor("loser stake", player.portfolio.get(loser.symbol, 0) * 15)
+            add_factor("opponent winner stake", -sum(
                 p.portfolio.get(winner.symbol, 0)
                 for p in game.players
                 if p is not player
-            ) * 4
+            ) * 4)
         elif game.touches_exactly_one_company(nsew):
             symbol = next(iter(nsew.companies))
-            score += 900
-            score += player.portfolio.get(symbol, 0) * 10
-            score += game.active_companies[symbol].outposts * 8
+            add_factor("expansion", 900)
+            add_factor("owned shares", player.portfolio.get(symbol, 0) * 10)
+            add_factor("company size", game.active_companies[symbol].outposts * 8)
         elif game.can_form_new_company(nsew):
-            score += 700
+            add_factor("new company", 700)
         else:
-            score += 120
+            add_factor("isolated outpost", 120)
 
-        score += nsew.stars * 500
-        score += nsew.outposts * 100
+        add_factor("adjacent stars", nsew.stars * 500)
+        add_factor("adjacent outposts", nsew.outposts * 100)
+
+        if explain:
+            return score, factors
         return score
 
     def buy_stocks(self, game, player):
@@ -164,24 +230,75 @@ class AdvancedAIStrategy(IntermediateAIStrategy):
 
     name = "advanced"
 
-    def choose_move(self, game, player, legal_moves):
+    def choose_move(self, game, player, legal_moves, capture_trace=False):
         best_move = legal_moves[0]
         best_score = float("-inf")
+        ranked = []
+        details_by_move = {}
 
         for move in legal_moves:
-            score = self._one_ply_score(game, player, move)
+            if capture_trace:
+                score, details = self._one_ply_score(game, player, move, explain=True)
+                ranked.append((move, score))
+                details_by_move[move] = details
+            else:
+                score = self._one_ply_score(game, player, move)
             if score > best_score:
                 best_score = score
                 best_move = move
 
+        if capture_trace:
+            if not ranked:
+                ranked = [(move, self._one_ply_score(game, player, move)) for move in legal_moves]
+            ranked_entries = sorted(ranked, key=lambda item: item[1], reverse=True)
+            selected_details = details_by_move.get(best_move, {})
+            base_factors = selected_details.get("base_factors", [])
+            components = selected_details.get("components", {})
+
+            component_factors = [
+                ("net worth delta", components.get("immediate_delta", 0.0) * 1.4),
+                ("opponent pressure", -components.get("opponent_best", 0.0) * 0.5),
+            ]
+
+            game.ai_last_trace = {
+                "strategy": self.name,
+                "selected_move": best_move,
+                "selection_mode": "one-ply",
+                "selected_factors": _top_factor_strings(base_factors + component_factors),
+                "ranked_moves": [
+                    {
+                        "move": move,
+                        "score": score,
+                        "factors": _top_factor_strings(
+                            details_by_move.get(move, {}).get("base_factors", [])
+                        ),
+                    }
+                    for move, score in ranked_entries
+                ],
+                "selected_components": components,
+            }
+
         return best_move
 
-    def _one_ply_score(self, game, player, move):
-        base_score = self._score_move(game, player, move)
+    def _one_ply_score(self, game, player, move, explain=False):
+        if explain:
+            base_score, base_factors = self._score_move(game, player, move, explain=True)
+        else:
+            base_score = self._score_move(game, player, move)
+            base_factors = []
 
         try:
             simulated = deepcopy(game)
         except Exception:
+            if explain:
+                return base_score, {
+                    "base_factors": base_factors,
+                    "components": {
+                        "base_score": base_score,
+                        "immediate_delta": 0.0,
+                        "opponent_best": 0.0,
+                    },
+                }
             return base_score
 
         try:
@@ -214,8 +331,27 @@ class AdvancedAIStrategy(IntermediateAIStrategy):
                 for opponent_move in opp_legal
             )
 
-            return base_score + (immediate_delta * 1.4) - (0.5 * opponent_best)
+            final_score = base_score + (immediate_delta * 1.4) - (0.5 * opponent_best)
+            if explain:
+                return final_score, {
+                    "base_factors": base_factors,
+                    "components": {
+                        "base_score": base_score,
+                        "immediate_delta": immediate_delta,
+                        "opponent_best": opponent_best,
+                    },
+                }
+            return final_score
         except Exception:
+            if explain:
+                return base_score, {
+                    "base_factors": base_factors,
+                    "components": {
+                        "base_score": base_score,
+                        "immediate_delta": 0.0,
+                        "opponent_best": 0.0,
+                    },
+                }
             return base_score
 
 

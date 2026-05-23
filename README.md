@@ -115,6 +115,16 @@ python trade_main.py
   python3 trade_main.py --color-scheme amber
   ```
 
+- `--show-ai-thinking {off,summary,detailed}`: Controls optional computer reasoning visibility during interactive games with at least one human player.
+
+  - `off`: no additional reasoning details (default).
+  - `summary`: appends top scoring factors to the computer turn status line.
+  - `detailed`: keeps the map on screen and prints ranked AI analysis below the map and portfolio.
+
+  ```bash
+  python3 trade_main.py --show-ai-thinking summary
+  ```
+
 For regular gameplay you can safely ignore these subsequent flags, as they are used almost exclusively for development.
 
 - `--headless`: Run in non-interactive autoplay mode suitable for CI/smoke runs.
@@ -131,6 +141,8 @@ For regular gameplay you can safely ignore these subsequent flags, as they are u
 - `--interactive {true,false}`: Enable or disable interactive prompts.
 
 - `--pause-at-end {true,false}`: Control whether the game waits for input before exiting. This allows an autopilot game to run to completion, and allow you to scroll back in your terminal to review the changing game state (useful for checking display or other game behaviors).
+
+When starting from interactive setup, this can also be selected in-program after computer difficulty prompts.
 
 ## Running Tests
 

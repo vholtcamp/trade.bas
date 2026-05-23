@@ -46,7 +46,22 @@ def test_help_includes_execution_mode_flags():
     assert "--autopilot" in result.stdout
     assert "--interactive" in result.stdout
     assert "--pause-at-end" in result.stdout
+    assert "--show-ai-thinking" in result.stdout
+    assert "summary" in result.stdout
+    assert "detailed" in result.stdout
     assert "{true,false}" in result.stdout
+
+
+def test_invalid_ai_thinking_mode_returns_cli_error():
+    result = subprocess.run(
+        [sys.executable, "trade_main.py", "--show-ai-thinking", "verbose"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "invalid choice" in result.stderr
 
 
 def test_monochrome_and_color_scheme_are_compatible_and_emit_no_ansi():
@@ -254,7 +269,7 @@ def test_interactive_startup_shows_setup_confirmation_prompt():
 def test_interactive_startup_edit_restarts_player_configuration_loop():
     result = subprocess.run(
         [sys.executable, "trade_main.py"],
-        input="2\n1\nB\nR\n3\n3\nQ\n",
+        input="2\n1\nB\nS\nR\n3\n3\nQ\n",
         capture_output=True,
         text=True,
         check=False,
@@ -264,3 +279,17 @@ def test_interactive_startup_edit_restarts_player_configuration_loop():
     assert result.returncode == 0
     assert result.stdout.count("How many total players (human + computer)") == 2
     assert result.stdout.count("How many human players") == 2
+
+
+def test_interactive_startup_prompts_for_ai_thinking_mode_when_computers_present():
+    result = subprocess.run(
+        [sys.executable, "trade_main.py"],
+        input="2\n1\nB\nQ\n",
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
+    )
+
+    assert result.returncode == 0
+    assert "Show computer thinking? [O]ff, [S]ummary, [D]etailed" in result.stdout

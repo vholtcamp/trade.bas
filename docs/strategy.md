@@ -27,3 +27,12 @@ Computer opponents always choose from the same five legal moves offered to human
 - **Against Intermediate and Advanced**: the computer actively prioritizes mergers where it holds a stake, expansion of companies it owns, and companies approaching a split. Claiming expansion squares near a company the computer holds before it can reach them is one of the most effective ways to slow it down. Similarly, investing early in a company the computer is also buying into lets you ride the same growth curve; but if the computer holds significantly more shares, it benefits more from the same price increase.
 
 - **On stock**: the Intermediate and Advanced computer maintains a cash reserve and concentrates on value companies rather than spreading thin. Watching which companies it is accumulating — visible in the portfolio display each turn — gives a useful signal for which companies are likely to grow. Following the computer into a fast-growing company early is often sound strategy; competing against it in the same stock in the late game, when shares are expensive and the split threshold approaches, is where the concentration penalty logic means it may start diversifying while you could double down.
+
+### Optional AI Thinking Visibility
+
+You can optionally expose computer reasoning during interactive games with human players.
+
+- **Summary mode**: adds a concise factor summary to the computer turn status line, showing the selected move and strongest scoring factors.
+- **Detailed mode**: keeps the map visible and prints top ranked candidate moves, scores, and major factors below the map/portfolio view.
+
+Both modes are explainability layers only. They do **not** change strategy weights, move legality, or purchase behavior.
