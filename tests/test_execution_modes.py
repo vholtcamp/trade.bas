@@ -333,7 +333,8 @@ def test_execute_turn_detailed_mode_keeps_thinking_in_map_flow(game_factory, mon
     assert game.ai_last_trace_player == computer.name
     flattened = "\n".join("\n".join(lines) for lines in map_snapshots if lines)
     assert "Options offered:" in flattened
-    assert "Stock logic:" in flattened
+    assert "Target cash reserve:" in flattened
+    assert "Top stocks:" in flattened
 
 
 @pytest.mark.interactive

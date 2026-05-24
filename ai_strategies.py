@@ -80,20 +80,22 @@ class BeginnerAIStrategy(BaseAIStrategy):
     def explain_stock_plan(self, game, player, limit=3):
         active_symbols = sorted(game.active_companies.keys())
         if not active_symbols:
-            return "Stock logic: no active companies to buy this turn."
+            return ["Target cash reserve: none.", "Top stocks: none (no active companies this turn)."]
 
-        samples = []
+        top_symbols = active_symbols[:limit]
+        examples = []
         for symbol in active_symbols[:limit]:
             company = game.active_companies[symbol]
             max_affordable = int(player.cash_on_hand // company.share_price)
             target = min((max_affordable // 2) + 1, 20) if max_affordable > 0 else 0
-            samples.append(f"{symbol} (${company.share_price:,} -> target about {target} shares)")
+            examples.append(f"{symbol} targets about {target} shares at ${company.share_price:,}")
 
-        return (
-            "Stock logic: beginner buys broadly in alphabetical order, usually around half of what is "
-            "affordable for each company (cap 20), without reserve tuning. "
-            f"Examples this turn: {', '.join(samples)}."
-        )
+        return [
+            "Target cash reserve: none (beginner strategy does not hold a reserve).",
+            f"Top stocks: {', '.join(top_symbols)} (alphabetical scan).",
+            "Beginner buys broadly and usually takes about half of affordable shares in each company (cap 20).",
+            f"Examples this turn: {'; '.join(examples)}.",
+        ]
 
 
 class IntermediateAIStrategy(BaseAIStrategy):
@@ -261,6 +263,8 @@ class IntermediateAIStrategy(BaseAIStrategy):
 
         if explain:
             return total_score, {
+                "symbol": company.symbol,
+                "company_name": company.name,
                 "share_price": company.share_price,
                 "dividend_signal": dividend_value,
                 "expansion_chances": expansion_chances,
@@ -273,30 +277,96 @@ class IntermediateAIStrategy(BaseAIStrategy):
 
         return total_score
 
+    @staticmethod
+    def _priority_word(score):
+        if score >= 200:
+            return "very high"
+        if score >= 120:
+            return "high"
+        if score >= 70:
+            return "moderate"
+        return "lower"
+
+    @staticmethod
+    def _dividend_word(dividend_signal):
+        if dividend_signal >= 100:
+            return "strong"
+        if dividend_signal >= 60:
+            return "solid"
+        if dividend_signal >= 30:
+            return "moderate"
+        return "light"
+
+    @staticmethod
+    def _expansion_word(expansion_chances):
+        if expansion_chances >= 6:
+            return "strong"
+        if expansion_chances >= 3:
+            return "moderate"
+        if expansion_chances >= 1:
+            return "limited"
+        return "very limited"
+
+    @staticmethod
+    def _split_word(share_price):
+        if share_price >= 2900:
+            return "near a split"
+        if share_price >= 2600:
+            return "approaching split range"
+        return "unlikely to split soon"
+
+    @staticmethod
+    def _ownership_word(owned):
+        if owned >= 10:
+            return "already a large position"
+        if owned >= 4:
+            return "already a meaningful position"
+        if owned >= 1:
+            return "already a small position"
+        return "currently unowned"
+
+    @staticmethod
+    def _concentration_word(concentration_penalty):
+        if concentration_penalty >= 60:
+            return "high concentration risk"
+        if concentration_penalty >= 24:
+            return "moderate concentration risk"
+        if concentration_penalty > 0:
+            return "light concentration risk"
+        return "no concentration risk"
+
     def explain_stock_plan(self, game, player, limit=3):
         reserve = max(500, int(player.net_worth * 0.1))
         ranked = self._rank_affordable_companies_explained(game, player, reserve)
 
         if not ranked:
-            return (
-                f"Stock logic: keep about ${reserve:,} in reserve; no company met affordability "
-                "plus reserve constraints this turn."
+            return [
+                f"Target cash reserve: ${reserve:,}.",
+                "Top stocks: none this turn (reserve and affordability filters removed all options).",
+            ]
+
+        top_ranked = ranked[:limit]
+        top_symbols = [company.symbol for _, company, _ in top_ranked]
+        lines = [
+            f"Target cash reserve: ${reserve:,}.",
+            f"Top stocks: {', '.join(top_symbols)}.",
+        ]
+
+        for score, company, details in top_ranked:
+            priority = self._priority_word(score)
+            dividend_word = self._dividend_word(details['dividend_signal'])
+            expansion_word = self._expansion_word(details['expansion_chances'])
+            split_word = self._split_word(details['share_price'])
+            ownership_word = self._ownership_word(details['owned'])
+            concentration_word = self._concentration_word(details['concentration_penalty'])
+
+            lines.append(
+                f"{company.symbol} ({company.name}): {priority} priority at ${details['share_price']:,}; "
+                f"{dividend_word} dividend, {expansion_word} expansion opportunities "
+                f"({details['expansion_chances']} lanes), {ownership_word}, {split_word}, {concentration_word}."
             )
 
-        explanations = []
-        for score, company, details in ranked[:limit]:
-            explanations.append(
-                f"{company.symbol} (${details['share_price']:,}, score {score:.0f}): "
-                f"dividend {details['dividend_signal']:.0f}, expansion lanes {details['expansion_chances']} "
-                f"(+{details['expansion_signal']:.0f}), owned {details['owned']} "
-                f"(+{details['ownership_signal']:.0f}), split pressure +{details['split_signal']:.0f}, "
-                f"concentration -{details['concentration_penalty']:.0f}"
-            )
-
-        return (
-            f"Stock logic: keeps about ${reserve:,} in reserve and ranks companies by value signals. "
-            f"Top priorities: {'; '.join(explanations)}."
-        )
+        return lines
 
 
 class AdvancedAIStrategy(IntermediateAIStrategy):

@@ -842,7 +842,7 @@ class Game():
                 purchase_clause = self._auto_buy_stocks(player, is_autopilot_turn=autopilot)
                 if show_computer_details:
                     thinking_clause = ''
-                    if show_ai_thinking:
+                    if show_ai_thinking and self.ai_thinking_mode == 'summary':
                         summary = self._ai_summary_from_trace()
                         if summary:
                             thinking_clause = f" ({summary})"
@@ -853,7 +853,7 @@ class Game():
                 player.buy_stocks()
         elif show_computer_details:
             thinking_clause = ''
-            if show_ai_thinking:
+            if show_ai_thinking and self.ai_thinking_mode == 'summary':
                 summary = self._ai_summary_from_trace()
                 if summary:
                     thinking_clause = f" ({summary})"
@@ -897,17 +897,17 @@ class Game():
 
         if strategy_name == 'beginner':
             active_count = len(self.active_companies)
-            return (
-                "Stock logic: beginner sweeps companies alphabetically, buying roughly half "
-                "of affordable shares per company (cap 20), with no reserve optimization "
-                f"across {active_count} active companies."
-            )
+            return [
+                "Target cash reserve: none.",
+                f"Top stocks: alphabetical sweep across {active_count} active companies.",
+                "Beginner buys broadly and roughly half of affordable shares per company (cap 20).",
+            ]
 
         reserve = max(500, int(player.net_worth * 0.1))
-        base_reason = (
-            f"Stock logic: reserve target about ${reserve:,}; "
-            "rank factors are dividend yield, expansion lanes, split proximity, and concentration control."
-        )
+        base_reason = [
+            f"Target cash reserve: ${reserve:,}.",
+            "Top stocks: ranked by dividend strength, expansion opportunities, split pressure, and concentration control.",
+        ]
 
         ranker = getattr(strategy, '_rank_affordable_companies', None)
         if callable(ranker):
@@ -917,17 +917,13 @@ class Game():
                 return base_reason
 
             if not ranked:
-                return base_reason + " No company met affordability+reserve constraints this pass."
+                return base_reason + ["No company met affordability plus reserve constraints this turn."]
 
             top_targets = []
             for score, company in ranked[:3]:
                 top_targets.append(f"{company.symbol}:{score:.0f}")
 
-            return (
-                f"Stock logic: top targets before buys {', '.join(top_targets)}; "
-                f"reserve target about ${reserve:,}; "
-                "rank factors are dividend yield, expansion lanes, split proximity, and concentration control."
-            )
+            return base_reason + [f"Top priorities this turn: {', '.join(top_targets)}."]
 
         return base_reason
 
@@ -1587,18 +1583,25 @@ class Display():
             lines.append(textwrap.shorten(component_text, width=wrap_width, placeholder='...'))
 
         if self.game.ai_last_stock_reason_player == player.name and self.game.ai_last_stock_reason:
-            wrapped_reason = textwrap.wrap(
-                self.game.ai_last_stock_reason,
-                width=wrap_width,
-                break_long_words=False,
-                break_on_hyphens=False,
-            )
-            if len(wrapped_reason) <= 3:
-                lines.extend(wrapped_reason)
+            if isinstance(self.game.ai_last_stock_reason, str):
+                reason_blocks = [self.game.ai_last_stock_reason]
             else:
-                lines.extend(wrapped_reason[:2])
-                overflow = " ".join(wrapped_reason[2:])
-                lines.append(textwrap.shorten(overflow, width=wrap_width, placeholder='...'))
+                reason_blocks = list(self.game.ai_last_stock_reason)
+
+            stock_lines = []
+            for block in reason_blocks:
+                wrapped_reason = textwrap.wrap(
+                    str(block),
+                    width=wrap_width,
+                    break_long_words=False,
+                    break_on_hyphens=False,
+                )
+                if not wrapped_reason:
+                    continue
+                stock_lines.extend(wrapped_reason)
+
+            if stock_lines:
+                lines.extend(stock_lines)
 
         return lines
 
